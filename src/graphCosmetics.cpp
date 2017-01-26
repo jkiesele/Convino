@@ -28,10 +28,11 @@ void applyGraphCosmetics(TGraphAsymmErrors* g, graphcosmetics c, double xlow, do
 		g->SetMarkerStyle(20);
 		g->SetLineColor(kRed);
 	}
-	else if(c==gc_scancombined){
+	else if(c==gc_scancombined || c==gc_scancombinedUP){
 		g->GetYaxis()->SetTitleOffset(1/scaler);
 		g->GetYaxis()->CenterTitle(true);
-		g->GetXaxis()->SetLabelSize(scaler*0.0);
+	//	if(gc_scancombinedUP)
+	//		g->GetXaxis()->SetLabelSize(scaler*0.0);
 		g->SetMarkerColor(kBlack);
 		g->SetMarkerStyle(20);
 		g->SetFillColor(kBlack);
