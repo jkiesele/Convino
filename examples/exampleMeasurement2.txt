@@ -1,0 +1,49 @@
+
+For introductory details, please see exampleMeasurement1.txt
+
+This measurement file describes a measurement with correlations between its
+systematic uncertainties and constraints on them. These are given in form of 
+a correlation matrix. For an example with a hessian as input, please refer to 
+exampleMeasurement3.txt
+
+
+[correlation matrix]
+  #
+  # The first row defines the name of each uncertainty or estimate
+  # The second row describes the constraints in absolute values on the
+  # parameters. In case of the estimates, it corresponds to the
+  # total uncertainty obtained by the fit used to measure them.
+  # Starting from the thrird row, the correlations are defined in 
+  # triangular form. The correlation matrix should be given with best
+  # precision possible.
+  # And example is shown below:
+  #
+
+  sys_a2       (1)  1
+  sys_b2       (1)  0            1
+  sys_c2       (1)  0           -0.2          1
+  sys_d2       (1) -.2           0.1          0            1 
+  estimate_a2  (10.6)  0.1826484018 0.0652968037 0.5479452055 0.105936073  1
+  estimate_b2  (12.8)  0.0826484018 0.3652968037 0.1479452055 0.4305936073 0 1
+
+[end correlation matrix]
+	
+[systematics]
+	
+  sys_c2 = relative
+	
+[end systematics]
+	
+	
+[estimates]
+	
+ 	n_estimates = 2
+ 	
+	name_0     = estimate_a2
+	value_0    = 790;
+	
+	name_1     = estimate_b2
+	value_1    = 290;
+ 	
+	
+[end estimates]

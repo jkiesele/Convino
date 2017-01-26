@@ -1,0 +1,65 @@
+
+This is an example of a measurement file.
+The description can be written in this header and will be ignored by the program.
+Comments can be made also within the blocks. Here they have to follow a #
+A measurement file can contain one or many estimates (or measurements) for one or many quantities.
+It is not strictly necessary, but adviced that estimates affected by uncertainties known correlations 
+(e.g. from one experiment) are summarised in one file.
+
+
+[hessian]
+  # 
+  # Numerically, the best way is to provide the Hessian of the measurement
+  # if it does not exclusively include orthogonal uncertainties.
+  # The hessian should be given with best precision possible.
+  #
+  
+  sys_a3       1944.6   
+  sys_b3      -1349. 1154.4  
+  sys_c3       1030.3 -638.6 593.45   
+  estimate_a3 -0.525 0.5398 -0.231     3.25e-4    
+  estimate_b3 -0.708 0.2706 -0.448 0        4.89e-4 
+  
+[end hessian]
+
+
+[correlation matrix]
+  #empty in this example.
+[end correlation matrix]
+
+[not fitted]
+  # 
+  # In addition to fitted uncertainties described by the hessian,
+  # also additional uncertainties, orthogonal to all others,
+  # can be added here. The "stat" entry will be ignored
+  # An example is provided below
+  #
+                  sys_d3  sys_e3         stat   
+  estimate_a3     5       6.1            6    
+  estimate_b3     3       1              2
+
+[end not fitted]
+
+	
+[systematics]
+	
+	sys_c3 = relative
+	
+[end systematics]
+	
+	
+[estimates]
+	
+	# The estimates (or measurements) are defined here. Statistical and total systematic uncertainty
+	# are given in percent.
+	
+ 	n_estimates = 2
+ 	
+	name_0     = estimate_a3
+	value_0    = 800;
+	
+	
+	name_1     = estimate_b3
+	value_1    = 300;
+	
+[end estimates]

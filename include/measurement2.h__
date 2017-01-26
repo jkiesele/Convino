@@ -1,0 +1,139 @@
+/*
+ * measurement.h
+ *
+ *  Created on: 12 Dec 2016
+ *      Author: jkiesele
+ */
+
+#ifndef INCLUDE_MEASUREMENT_H_
+#define INCLUDE_MEASUREMENT_H_
+
+#include <string>
+#include <vector>
+#include "triangularMatrix.h"
+#include "parameters.h"
+#include "TString.h"
+#include "TH1D.h"
+#include "tensor.h"
+
+class measurement{
+public:
+	measurement():setup_(false),noLambdaRel_(true) {}
+
+	measurement(const std::string& infile):setup_(false){
+		readFromFile(infile);
+	}
+
+	void readFromFile(const std::string& infile);
+
+	/*
+	 * Root interface TBI
+	 *
+	 *
+	 */
+	void setMeasured(const TH1D* h);
+	void setMeasured(std::vector<double> meas, std::vector<double> stat);
+
+	void addSystematics(const TString& name, const TH1D* h);
+
+	/**
+	 * the values must correspond to nominal+systematic uncertainty
+	 */
+	void addSystematics(const TString& name, std::vector<double> variedmeas);
+
+	void setEstimateCorrelation(const size_t& i, const size_t& j, const double& val);
+	/*
+	 * pure C++ interface (also for testing)
+	 * also extends (creates) parameter vector
+	 */
+
+	void setHessian(const triangularMatrix&h);
+	const triangularMatrix& getHessian(){return H_;}
+
+	void setParameterType(const size_t & idx, parameter::para_type type);
+
+	void setParameterType(const TString & name, parameter::para_type type);
+
+	void setParameterValue(const size_t & idx, const double& val);
+
+	void associateEstimate(const size_t & est_idx, const size_t & comb_idx);
+
+	void associateEstimate(const TString & est_name, const size_t & comb_idx);
+
+	void associateAllLambdas(const triangularMatrix& fullLambdaCorrs);
+
+
+	//call right before minmisation
+	void setup();
+
+	double evaluate(const double* pars, double* df, const bool& pearson, const size_t& maxidx/* for size check */)const;//returns contribution to chi2
+
+	const std::vector<parameter> & getLambdas()const{return lambdas_;}//for priors
+
+	const parameter& getParameter(const TString& name)const;
+
+	static bool debug;
+
+private:
+
+	bool setup_;
+
+	/*
+	 * raw input
+	 */
+	triangularMatrix H_;
+	std::vector<parameter> paras_;
+
+	/*
+	 * matrices are implemented as dim-2 vectors for performance reasons
+	 *
+	 * make this less memory consuming at some point
+	 *
+	 */
+	std::vector<std::vector<double> > M_, kappa_, Co_;
+
+
+	bool isLambda(const size_t & idx)const{
+		return idx>=x_.size();
+	}
+	float sumLLL(size_t i, size_t j,size_t k, const std::vector<std::vector<float> >& rho, const std::vector<float>& sigma,
+			const std::vector<std::vector<float> >& krel,const std::vector<std::vector<float> >& kabs)const;
+
+	float Lambda2Lambda(size_t common, size_t diff, const std::vector<std::vector<float> >& rho, const std::vector<float>& sigma,
+			const std::vector<std::vector<float> >& krel,const std::vector<std::vector<float> >& kabs)const;
+
+	float LambdaAllDiff(size_t i, size_t j,size_t k, const std::vector<std::vector<float> >& rho, const std::vector<float>& sigma,
+			const std::vector<std::vector<float> >& krel,const std::vector<std::vector<float> >& kabs)const;
+
+	float LambLambX(size_t i, size_t j,size_t mu, const std::vector<std::vector<float> >& rho, const std::vector<float>& sigma,
+			const std::vector<std::vector<float> >& krel,const std::vector<std::vector<float> >& kabs)const;
+
+	float LambXX(size_t i, size_t mu,size_t nu, const std::vector<std::vector<float> >& rho, const std::vector<float>& sigma,
+			const std::vector<std::vector<float> >& krel,const std::vector<std::vector<float> >& kabs)const;
+
+	float XXX(size_t i, size_t mu,size_t nu, const std::vector<std::vector<float> >& rho, const std::vector<float>& sigma,
+			const std::vector<std::vector<float> >& krel,const std::vector<std::vector<float> >& kabs)const;
+
+	/*
+	 * Higher-order corrections
+	 */
+	tensor M3_;
+	bool noLambdaRel_;
+
+	std::vector<std::vector<double> > k_;
+
+	//make this 3x3 individual ones for M, kappa, and Co
+	std::vector<std::vector<std::vector<double> > > h3_;// 3rd order expansion (split? - may be easier)
+	std::vector<parameter> lambdas_;
+	std::vector<parameter> x_;
+
+
+	/*
+	 * Temps for root/c++ interface
+	 */
+	correlationMatrix estcorr_;
+};
+
+
+
+#endif /* INCLUDE_MEASUREMENT_H_ */

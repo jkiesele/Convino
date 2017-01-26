@@ -1,0 +1,705 @@
+/*
+ * measurement.cpp
+ *
+ *  Created on: 12 Dec 2016
+ *      Author: jkiesele
+ */
+
+
+#include "measurement.h"
+#include "TMatrixD.h"
+#include "matrixHelper.h"
+#include "helpers.h"
+#include "fileReader.h"
+#include <iostream>
+
+bool measurement::debug=true;
+
+void measurement::readFromFile(const std::string& infile){
+	//search for Hessian
+	triangularMatrix hessian;
+
+	fileReader fr;
+
+	bool hashessian=true;
+	try{
+		hessian.readFromFile(infile, "hessian");
+		setHessian(hessian);
+	}catch(...){
+		hashessian=false;
+	}
+	std::vector<double> constr;
+	triangularMatrix corr;
+	if(!hashessian){
+
+		corr.readFromFile(infile,"correlation matrix");
+
+		setHessian(corr); //creates parameters
+
+		fr.clear();
+		fr.setDelimiter(" ");
+		fr.setStartMarker("[correlation matrix]");
+		fr.setEndMarker("[end correlation matrix]");
+		fr.readFile(infile);
+
+
+
+		for(size_t i=0;i<fr.nLines();i++){
+			size_t nentries = fr.nEntries(i);
+			if(nentries>1 && nentries < 3) break; //there is no constraint info
+
+			TString sysname = fr.getData<TString>(i,0);
+
+			TString constraintstr = fr.getData<TString>(i,1);
+
+			/*
+			 * convert to double
+			 */
+			constraintstr.ReplaceAll("(","");
+			constraintstr.ReplaceAll(")","");
+			double constraint = constraintstr.Atof();
+
+			constr.push_back(constraint);
+
+		}
+
+
+	}
+
+	fr.setComment("#");
+	fr.setStartMarker("[estimates]");
+	fr.setEndMarker("[end estimates]");
+	fr.readFile(infile);
+
+	size_t n_est = fr.getValue<int>("n_estimates");
+	for(size_t i=0;i<n_est;i++){
+		std::string istr     = toString(i);
+		TString estimatename = fr.getValue<TString>("name_"+istr);
+		const double value   = fr.getValue<double>("value_"+istr);
+
+		size_t paraidx=getHessian().getEntryIndex(estimatename);
+
+		paras_.at(paraidx).setNominalVal(value);
+		paras_.at(paraidx).setType(parameter::para_estimate);
+
+		if(hashessian)continue;
+
+		const double totalunc     = value * fr.getValue<double>("uncertainty_"+istr)/100;
+
+		constr.at(paraidx) = totalunc;
+
+	}
+
+	fr.clear();
+	fr.setStartMarker("[systematics]");
+	fr.setEndMarker("[end systematics]");
+	fr.setDelimiter("=");
+	fr.readFile(infile);
+
+	for(size_t i=0;i<fr.nLines();i++){
+
+		if(fr.nEntries(i)<2)continue;
+
+		TString sysname = fr.getData<TString>(i,0);
+		TString type    = fr.getData<TString>(i,1);
+		size_t idx=0;
+		try{
+			idx=getHessian().getEntryIndex(sysname);
+		}catch(...){
+			throw std::runtime_error(("measurement::readFromFile: setting systematics types: no entry for "+sysname+" found").Data());
+		}
+
+		if(type=="lognormal")
+			paras_.at(idx).setType(parameter::para_unc_lognormal);
+		else if(type=="absolute")
+			paras_.at(idx).setType(parameter::para_unc_absolute);
+		else if(type=="relative")
+			paras_.at(idx).setType(parameter::para_unc_relative);
+		else
+			throw std::runtime_error(
+					("combiner::measurement::readFromFile: setting systematics types: type "+
+							type+" not recognized\noptions: lognormal, absolute, relative (default)\nthe latter two imply gaussian priors").Data());
+	}
+
+	if(hashessian) return;
+
+	//create hessian from correlation matrix
+	for(size_t i=0;i<corr.size();i++){
+		for(size_t j=i;j<corr.size();j++){
+			corr.setEntry(i,j, corr.getEntry(i,j) * constr.at(i) * constr.at(j));
+		}
+	}
+	double det;
+	corr.invert(det);
+	if(det<0)
+		throw std::runtime_error("measurement::readFromFile: covariance not positive definite.\ntry to give Hessian directly or increase precision.");
+	H_=corr;
+
+}
+
+
+
+////////// C++ interface //////////
+
+void measurement::setMeasured(const TH1D* h){
+	if(paras_.size())
+		throw std::logic_error("measurement::setMeasured: allowed to define only one measured distribution per instance");
+	/*
+	int nbins=h->GetNbinsX()+2;
+	//UF/OF?
+	paras_.resize(1);//DEBUG
+
+	for(size_t i=0;i<in.size();i++){
+		estimates_.at(i).setName(toTString(i));
+		estimates_.at(i).setNominalVal(in.at(i));
+	}
+	 */
+}
+void measurement::setMeasured(std::vector<double> meas, std::vector<double> stat){
+
+}
+
+void measurement::addSystematics(const TString& name, const TH1D* h){
+
+}
+
+void measurement::addSystematics(const TString& name, std::vector<double> variedmeas){
+
+}
+void measurement::setEstimateCorrelation(const size_t& i, const size_t& j, const double& val){
+
+}
+
+
+
+void measurement::setHessian(const triangularMatrix&h){
+	setup_=false;
+	TMatrixD H;
+	h.toTMatrix(H);
+	matrixHelper m(H);
+	if(! m.checkMatrixPosDefinite(H))
+		throw std::runtime_error("measurement::setHessian: Hessian not postive definite");
+	H_=h;
+	paras_.resize(H_.size());
+	for(size_t i=0;i<paras_.size();i++){
+		paras_.at(i).setName(H_.getEntryName(i));
+	}
+}
+
+void measurement::setParameterType(const size_t & idx, parameter::para_type type){
+	setup_=false;
+	if(idx>=paras_.size()) throw std::out_of_range("measurement::setParameterType");
+	paras_.at(idx).setType(type);
+}
+
+void measurement::setParameterType(const TString & name, parameter::para_type type){
+	setup_=false;
+	size_t idx=H_.getEntryIndex(name);
+	paras_.at(idx).setType(type);
+}
+
+void measurement::setParameterValue(const size_t & idx, const double& val){
+	if(idx>=paras_.size()) throw std::out_of_range("measurement::setParameterValue");
+	paras_.at(idx).setNominalVal(val);
+}
+
+
+void measurement::associateEstimate(const size_t & est_idx, const size_t & comb_idx){
+	setup_=false;
+	if(est_idx>=paras_.size()) throw std::out_of_range("measurement::associateEstimate");
+	paras_.at(est_idx).setAsso(comb_idx);
+
+}
+
+void measurement::associateEstimate(const TString & est_name, const size_t & comb_idx){
+	setup_=false;
+	size_t idx=H_.getEntryIndex(est_name);
+	paras_.at(idx).setAsso(comb_idx);
+}
+
+void measurement::associateAllLambdas(const triangularMatrix& fullLambdaCorrs){
+	if(debug)
+		std::cout << "measurement::associateAllLambdas"  << std::endl;
+	setup_=false;
+	for(size_t i=0;i<fullLambdaCorrs.size();i++){
+		const TString& name=fullLambdaCorrs.getEntryName(i);
+		for(auto& p: paras_){
+			if(name == p.name()){
+				p.setAsso(i);
+				if(debug)
+					std::cout << p.name() << " " << i << std::endl;
+			}
+		}
+	}
+}
+
+
+void measurement::setup(){
+	/*
+	 * kappa: (est,lambda)
+	std::vector<std::vector<double> > M_, k, Co_;
+	std::vector<parameter> lambdas_;
+	std::vector<parameter> x_;
+	 */
+	noLambdaRel_=true;
+	lambdas_.clear();
+	x_.clear();
+	M_.clear();
+	kappa_.clear();
+	Co_.clear();
+
+	size_t nest=0,nlamb=0;
+	for(const auto& p:paras_){
+		if(p.getType() == parameter::para_estimate){
+			nest++;
+			x_.push_back(p);
+		}
+		else{
+			nlamb++;
+			lambdas_.push_back(p);
+		}
+	}
+
+
+	for(size_t i=0;i<H_.size();i++){
+		const parameter::para_type& pti = paras_.at(i).getType();
+		std::vector<double> mvec,kvec,kkvec,covec;
+		for(size_t j=0;j<H_.size();j++){
+			const parameter::para_type& ptj = paras_.at(j).getType();
+			if(pti==parameter::para_estimate){
+				if(ptj==parameter::para_estimate){
+					mvec.push_back(H_.getEntry(i,j));
+				}
+				else{
+					kvec.push_back(H_.getEntry(i,j));
+					double kkappa=H_.getEntry(i,j) / H_.getEntry(i,i);
+					kkvec.push_back(kkappa);
+				}
+			}
+			else if(ptj!=parameter::para_estimate){
+				covec.push_back(H_.getEntry(i,j));
+			}
+
+		}
+		if(pti==parameter::para_estimate){
+			M_.push_back(mvec);
+			kappa_.push_back(kvec);
+		}
+		else{
+			Co_.push_back(covec);
+		}
+	}
+
+	std::cout << "creating Co" <<std::endl;//DEBUG
+
+	for(size_t i=0;i<Co_.size();i++)
+		Co_.at(i).at(i)-=1;
+
+
+	//set up 3rd order part
+	//consistently use floats here to reduce memory consumption
+
+	std::cout << "creating sigmas" <<std::endl;//DEBUG
+
+	std::vector<float> sigmas(M_.size());
+	std::vector<std::vector<float> > rhos(M_.size(),std::vector<float> (M_.size(),0));
+	/*
+	 * *** calculate sigmas from initial Hessian part kappa
+	 */
+	for(size_t i=0;i<M_.size();i++)
+		sigmas.at(i) = std::sqrt(1/M_.at(i).at(i));
+
+	for(size_t i=0;i<M_.size();i++){
+		for(size_t j=0;j<M_.size();j++){
+			if(i==j){
+				rhos.at(i).at(j)=1; //strictly speaking not necessary
+			}
+			else{
+				rhos.at(i).at(j)= M_.at(i).at(j) *  sigmas.at(i) * sigmas.at(j);
+			}
+		}
+	}
+
+
+
+	std::cout << "creating ks" <<std::endl;//DEBUG
+	/*
+	 * kappa _mu _i
+	 */
+	size_t kssize=0;
+	if(kappa_.size())
+		kssize=kappa_.at(0).size();
+	std::vector<std::vector<float> >ksrel(kappa_.size(),std::vector<float>(kssize,0));
+	std::vector<std::vector<float> >ksabs(kappa_.size(),std::vector<float>(kssize,0));
+	/*
+	 * *** calculate ks from initial Hessian part kappa
+	 * *** if one is rel, leave abs 0 and vice versa
+	 */
+	TMatrixD TM(M_.size(),M_.size());
+	for(size_t i=0;i<M_.size();i++){
+		for(size_t j=0;j<M_.size();j++){
+			TM[i][j]=M_.at(i).at(j);
+		}
+	}
+	double det=0;
+	TM.Invert(&det);
+	if(!det){
+		throw std::runtime_error("Part of Hessian for estimates not invertible! Serious error, please check your input");
+	}
+
+	std::cout << "creating ks (2)" <<std::endl;//DEBUG
+	// k_i = M-1 kappa_i
+	for(size_t i=0;i<kssize;i++){
+		std::vector<double> thiskappas(M_.size());
+		for(size_t mu=0;mu<M_.size();mu++){
+			thiskappas.at(mu) = kappa_.at(mu).at(i);
+		}
+		TVectorD vec(thiskappas.size(), &thiskappas.at(0));
+		TVectorD ki = TM * vec;
+		if(lambdas_.at(i).isRelative()){
+			noLambdaRel_=false;
+			for(size_t mu=0;mu<M_.size();mu++)
+				ksrel.at(mu).at(i)=vec[mu];
+		}
+		else{
+			for(size_t mu=0;mu<M_.size();mu++)
+				ksabs.at(mu).at(i)=vec[mu];
+		}
+	}
+
+
+
+	/*
+	 * *** calculate higher-order tensor from k, c, and sigma
+	 *
+	 *
+	 * *** est, then lambda
+	 */
+	M3_ = symm_tensor(H_.size());
+
+	std::cout << "Filling tensor" <<std::endl;//DEBUG
+
+	for(size_t ca=0;ca<M3_.dimA();ca++){
+		size_t mu=ca;
+		int  i =ca-x_.size();
+		for(size_t cb=0;cb<M3_.dimB();cb++){
+			size_t nu=cb;
+			int j = cb-x_.size();
+			for(size_t cc=0;cc<M3_.dimC();cc++){
+				size_t tau=cc;
+				int k=cc-x_.size();
+				std::cout << ca << ' ' << cb << ' ' << cc << std::endl; //DEBUG
+
+				//a pity, but has to be like this
+				if(isLambda(ca) && isLambda(cb) && isLambda(cc)){
+					std::cout << "l3" << std::endl; //DEBUG
+					//use i j k, only lambda
+					float element=0;
+					if(i==j && k==j && i==k){
+						element=0;
+					}
+					else if(i==j){
+						element=Lambda2Lambda(i,k,rhos,sigmas,ksrel,ksabs);
+					}
+					else if(i==k){
+						element=Lambda2Lambda(i,j,rhos,sigmas,ksrel,ksabs);
+					}
+					else if(k==j){
+						element=Lambda2Lambda(k,i,rhos,sigmas,ksrel,ksabs);
+					}
+					else{ //fully mixed
+						element=LambdaAllDiff(i,j,k,rhos,sigmas,ksrel,ksabs);
+					}
+					M3_.at(ca,cb,cc)=element;
+				}
+				else if(isLambda(ca) && isLambda(cb) && !isLambda(cc)){
+					std::cout << "l2x a" << std::endl; //DEBUG
+					//use i j tau
+					float element=0;
+					element=LambLambX(i,j,tau,rhos,sigmas,ksrel,ksabs);
+					M3_.at(ca,cb,cc)=element;
+				}
+				else if(isLambda(ca) && !isLambda(cb) && isLambda(cc)){
+					std::cout << "l2x b" << std::endl; //DEBUG
+					//use i nu k
+					float element=0;
+					element=LambLambX(i,k,nu,rhos,sigmas,ksrel,ksabs);
+					M3_.at(ca,cb,cc)=element;
+				}
+				else if(!isLambda(ca) && isLambda(cb) && isLambda(cc)){
+					std::cout << "l2x c" << std::endl; //DEBUG
+					//use mu j k
+					float element=0;
+					element=LambLambX(k,j,mu,rhos,sigmas,ksrel,ksabs);
+					M3_.at(ca,cb,cc)=element;
+				}
+				else if(isLambda(ca) && !isLambda(cb) && !isLambda(cc)){
+					std::cout << "lx2 a" << std::endl; //DEBUG
+					//use i nu tau
+					float element=0;
+					element=LambXX(i,nu,tau,rhos,sigmas,ksrel,ksabs);
+					M3_.at(ca,cb,cc)=element;
+				}
+				else if(!isLambda(ca) && !isLambda(cb) && isLambda(cc)){
+					std::cout << "lx2 b" << std::endl; //DEBUG
+					//use mu nu k
+					float element=0;
+					element=LambXX(k,mu,nu,rhos,sigmas,ksrel,ksabs);
+					M3_.at(ca,cb,cc)=element;
+				}
+				else if(!isLambda(ca) && isLambda(cb) && !isLambda(cc)){
+					std::cout << "lx2 c" << std::endl; //DEBUG
+					//use mu j tau
+					float element=0;
+					element=LambXX(j,mu,tau,rhos,sigmas,ksrel,ksabs);
+					M3_.at(ca,cb,cc)=element;
+				}
+				else if(!isLambda(ca) && !isLambda(cb) && !isLambda(cc)){
+					std::cout << "x3" << std::endl; //DEBUG
+					//use mu nu tau
+					float element=0;
+					element=XXX(mu,nu,tau,rhos,sigmas,ksrel,ksabs);
+					M3_.at(ca,cb,cc)=element;
+				}
+
+			}
+		}
+	}
+
+
+
+	//DEBUG
+
+	std::cout << "H:\n" << H_<<std::endl;
+	std::cout << "M: " << M_<<std::endl;
+	std::cout << "kappa: " << kappa_<<std::endl;
+	std::cout << "Co: " << Co_<<std::endl;
+	std::cout << "M3:\n " << M3_*100. << "%" <<std::endl;
+
+
+
+	setup_=true;
+}
+
+
+float measurement::sumLLL(size_t i, size_t j,size_t k, const std::vector<std::vector<float> >& rho, const std::vector<float>& sigma,
+		const std::vector<std::vector<float> >& krel,const std::vector<std::vector<float> >& kabs)const{
+	float out=0;
+	for(size_t mu=0;mu<x_.size();mu++){
+		for(size_t nu=0;nu<x_.size();nu++){
+			out+=rho.at(mu).at(nu)/(sigma.at(mu)*sigma.at(nu)*x_.at(mu).getNominalVal()) *
+					krel.at(mu).at(i)*(krel.at(mu).at(j)+ kabs.at(mu).at(j)) * krel.at(mu).at(k);
+		}
+	}
+	return out;
+}
+
+
+float measurement::Lambda2Lambda(size_t common, size_t diff, const std::vector<std::vector<float> >& rhos, const std::vector<float>& sigmas,
+		const std::vector<std::vector<float> >& ksrel,const std::vector<std::vector<float> >& ksabs)const{
+	return 2* sumLLL(common,common,diff,rhos,sigmas,ksrel,ksabs);
+}
+
+
+float measurement::LambdaAllDiff(size_t i, size_t j,size_t k, const std::vector<std::vector<float> >& rho, const std::vector<float>& sigma,
+		const std::vector<std::vector<float> >& krel,const std::vector<std::vector<float> >& kabs)const{
+
+	return sumLLL(i,j,k,rho,sigma,krel,kabs) + sumLLL(j,k,i,rho,sigma,krel,kabs) + sumLLL(k,i,j,rho,sigma,krel,kabs);
+
+}
+
+float measurement::LambLambX(size_t i, size_t j,size_t mu, const std::vector<std::vector<float> >& rho, const std::vector<float>& sigma,
+		const std::vector<std::vector<float> >& krel,const std::vector<std::vector<float> >& kabs)const{
+	float out=0;
+
+	for(size_t nu=0;nu<x_.size();nu++)
+		out -= rho.at(mu).at(nu) * krel.at(mu).at(i) * krel.at(nu).at(j)/(sigma.at(mu) * sigma.at(nu) * x_.at(nu).getNominalVal());
+
+	for(size_t nu=0;nu<x_.size();nu++){
+		float factor = - rho.at(mu).at(nu) * krel.at(mu).at(i) * krel.at(nu).at(j)/(sigma.at(mu) * sigma.at(nu) * x_.at(mu).getNominalVal());
+
+		out+= factor* (krel.at(mu).at(i) * (krel.at(nu).at(j) + kabs.at(nu).at(j))
+				+ krel.at(nu).at(j) * (krel.at(mu).at(i) + kabs.at(mu).at(i))
+				- 0.5 * (krel.at(nu).at(j) + kabs.at(nu).at(j))* (krel.at(mu).at(i) + kabs.at(mu).at(i))
+				- 0.5 * (krel.at(mu).at(j) + kabs.at(mu).at(j))* (krel.at(nu).at(i) + kabs.at(nu).at(i))) ;
+	}
+	return out;
+}
+
+float measurement::LambXX(size_t i, size_t mu,size_t nu, const std::vector<std::vector<float> >& rho, const std::vector<float>& sigma,
+		const std::vector<std::vector<float> >& krel,const std::vector<std::vector<float> >& kabs)const{
+	float out=0;
+	if(mu==nu){
+		for(size_t tau=0;tau<x_.size();tau++){
+			if(tau==mu)continue;
+			out-=rho.at(tau).at(nu) * (krel.at(tau).at(i) + kabs.at(tau).at(i)) / (sigma.at(tau) * sigma.at(mu) * x_.at(mu).getNominalVal());
+		}
+		out+=2*krel.at(mu).at(i)/(sigma.at(mu) * sigma.at(mu) * x_.at(mu).getNominalVal());
+		out+=2*(krel.at(mu).at(i) + kabs.at(mu).at(i)) / (sigma.at(mu) * sigma.at(mu) * x_.at(mu).getNominalVal());
+	}
+	else{
+		float factor=rho.at(mu).at(nu)/(sigma.at(mu) * sigma.at(nu));
+		out+= factor* ( (krel.at(mu).at(i) - 0.5*(krel.at(mu).at(i) + kabs.at(mu).at(i)) ) /x_.at(mu).getNominalVal());
+		out+= factor* ( (krel.at(nu).at(i) - 0.5*(krel.at(nu).at(i) + kabs.at(nu).at(i)) ) /x_.at(nu).getNominalVal());
+	}
+
+
+	return out;
+}
+
+
+float  measurement::XXX(size_t mu, size_t nu,size_t tau, const std::vector<std::vector<float> >& rho, const std::vector<float>& sigma,
+		const std::vector<std::vector<float> >& krel,const std::vector<std::vector<float> >& kabs)const{
+
+	//if(mu != nu && nu != tau && mu != tau)
+	//	return 0;
+	if(mu == nu && nu == tau && mu == tau)
+		return 2/(sigma.at(mu)*sigma.at(mu) * x_.at(mu).getNominalVal());
+
+	if(mu == nu)
+		return rho.at(mu).at(tau)/( sigma.at(mu)*sigma.at(tau) * x_.at(mu).getNominalVal());
+	if(mu == tau)
+		return rho.at(mu).at(nu)/( sigma.at(mu)*sigma.at(nu) * x_.at(mu).getNominalVal());
+	if(tau == nu)
+		return rho.at(mu).at(tau)/( sigma.at(mu)*sigma.at(tau) * x_.at(tau).getNominalVal());
+
+	return 0; //none equal
+}
+
+double measurement::evaluate(const double* pars, double* df, const bool& pearson, const size_t& maxidx)const{
+	if(!setup_)
+		throw std::runtime_error("measurement::evaluate: first call setup()");
+	//cannot be done automatically since this function needs to be const
+
+	const size_t nlamb=lambdas_.size();
+	const size_t nx=x_.size();
+
+
+
+	//std::cout << "eval" <<std::endl;
+
+
+	//FIXME implement gradient df!
+	//df all set to zero before, only ADD here
+
+	double xsqpart=0;
+	//x^2 part - symmetric
+	for(size_t mu=0;mu<nx;mu++){
+
+		double delta_x_mu = x_.at(mu).getNominalVal() - pars[x_.at(mu).getAsso()];
+
+		for(size_t nu=mu;nu<nx;nu++){
+
+			double delta_x_nu = x_.at(nu).getNominalVal() - pars[x_.at(nu).getAsso()];
+
+			double contribution=delta_x_mu * delta_x_nu * M_.at(mu).at(nu);
+
+			//add higher order terms
+			if(!noLambdaRel_ || pearson){ //otherwise terms vanish
+				for(size_t tau=0;tau<nx;tau++){
+					if(!M3_.at(mu,nu,tau)) continue;
+					double delta_x_tau = x_.at(tau).getNominalVal() - pars[x_.at(tau).getAsso()];
+					contribution += M3_.at(mu,nu,tau) * delta_x_mu * delta_x_nu * delta_x_tau;
+				}
+				for(size_t i=0;i<nlamb;i++){
+					if(!M3_.at(mu,nu,i+nx)) continue;
+					double lambda_i = pars[lambdas_.at(i).getAsso()];
+					contribution += M3_.at(mu,nu,i+nx) * delta_x_mu * delta_x_nu * lambda_i;
+				}
+			}
+
+			if(mu!=nu)
+				contribution*=2;
+			xsqpart+=contribution;
+		}
+	}
+
+	double xlambdapart=0;
+	//x-lambda part
+	for(size_t mu=0;mu<nx;mu++){
+		double delta_x_mu = x_.at(mu).getNominalVal() - pars[x_.at(mu).getAsso()];
+
+		for(size_t i=0;i<nlamb;i++){
+			double lambda_i = pars[lambdas_.at(i).getAsso()];
+			double contribution=lambda_i * kappa_.at(mu).at(i) * delta_x_mu;
+
+			//add higher order terms
+			if(!noLambdaRel_ || pearson){ //otherwise terms vanish
+				for(size_t tau=0;tau<nx;tau++){
+					if(!M3_.at(mu,i+nx,tau)) continue;
+					double delta_x_tau = x_.at(tau).getNominalVal() - pars[x_.at(tau).getAsso()];
+					contribution += M3_.at(mu,i+nx,tau) * delta_x_mu * lambda_i * delta_x_tau;
+				}
+				for(size_t j=0;j<nlamb;j++){
+					if(!M3_.at(mu,i+nx,j)) continue;
+					double lambda_j = pars[lambdas_.at(j).getAsso()];
+					contribution += M3_.at(mu,i+nx,j+nx) * delta_x_mu * lambda_j * lambda_i;
+				}
+			}
+
+			xlambdapart+=contribution;
+		}
+	}
+
+	double copart=0;
+	//lambda^2 - symmetric in lambda
+	for(size_t i=0;i<nlamb;i++){
+		double lambda_i = pars[lambdas_.at(i).getAsso()];
+		for(size_t j=i;j<nlamb;j++){
+			double lambda_j = pars[lambdas_.at(j).getAsso()];
+
+			double contribution=lambda_i * lambda_j * Co_.at(i).at(j);
+			if(!noLambdaRel_ || pearson){ //otherwise terms vanish
+				for(size_t tau=0;tau<nx;tau++){
+					if(!M3_.at(i+nx,j+nx,tau)) continue;
+					double delta_x_tau = x_.at(tau).getNominalVal() - pars[x_.at(tau).getAsso()];
+					contribution += M3_.at(i+nx,j+nx,tau) * lambda_j * lambda_i * delta_x_tau;
+				}
+				for(size_t k=0;k<nlamb;k++){
+					if(!M3_.at(i+nx,j+nx,k+nx)) continue;
+					double lambda_k = pars[lambdas_.at(k).getAsso()];
+					contribution += M3_.at(i+nx,j+nx,k+nx) * lambda_k * lambda_j * lambda_i;
+				}
+			}
+
+
+			if(i!=j)
+				contribution*=2;
+			copart+=contribution;
+		}
+	}
+
+
+	if(xsqpart != xsqpart || xlambdapart!= xlambdapart || copart!=copart){
+		for(size_t i=0;i<lambdas_.size();i++){
+			std::cout << lambdas_.at(i).name() <<" "<< pars[lambdas_.at(i).getAsso()] << std::endl;
+		}
+		for(size_t i=0;i<x_.size();i++){
+			std::cout << x_.at(i).name() <<" "<< pars[x_.at(i).getAsso()]<< std::endl;
+		}
+		if(xsqpart != xsqpart )
+			throw std::runtime_error("measurement::evaluate: nan in x^2 part");
+		if(xlambdapart!= xlambdapart)
+			throw std::runtime_error("measurement::evaluate: nan in x*lambda part");
+		if(copart!=copart)
+			throw std::runtime_error("measurement::evaluate: nan in lambda^2 part");
+	}
+	double out=xsqpart + 2* xlambdapart + copart;
+	std::cout << "xsqpart + 2* xlambdapart + copart: "<< out <<" = " << xsqpart << " " << 2* xlambdapart << " " << copart << std::endl; //DEBUG
+
+
+	//if(out < 0) out=-out; //fix for 3rd order term
+	return out;
+}
+
+
+
+
+
+
+const parameter& measurement::getParameter(const TString& name)const{
+	for(const auto& p:paras_)
+		if(p.name() == name)return p;
+
+	throw std::out_of_range(("measurement::getParameter "+name+" not found").Data());
+}

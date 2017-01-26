@@ -1,0 +1,50 @@
+
+This is an example base file.
+The header can be used for documentation and will be ignored by the program.
+Comments within the blocks have to begin with #.
+The input block lists the measurement files. For details, please see exampleMeasurement1.txt
+The other blocks are commented individually
+
+[inputs]
+
+    nFiles = 3
+
+    file0 = exampleMeasurement1.txt
+    file1 = exampleMeasurement2.txt
+    file2 = exampleMeasurement3.txt
+    
+[end inputs]
+	
+	
+[observables]
+	
+	# This block defines which estimates should be combined.
+	# The combined name of the observable can be chosen freely.
+	
+	combined_a = estimate_a1 + estimate_a2 + estimate_a3
+	combined_b = estimate_b1 + estimate_b2 + estimate_b3
+	
+[end observables]
+	
+	
+# correlations syntax: 
+# parameter = (<nominal correlation> & <scan from> : <to>) <other parameter> + other correlations
+# entries for scan are optional. If not used, syntax: "(<nominal correlation>)"
+[correlations]
+	
+	# This block defines the assumptions on the correlations that are not given 
+	# in the individual measurement files. (They can be redefined here, though)
+	# It is adviced that most correlations that are known are given in the measurement files,
+	# e.g. the case for fully consistent estimates obtained in measurements from one experiment.
+	
+	# The syntax for correlation assumptions defined here is as follows:
+	# parameter = (<nominal correlation> & <scan from> : <to>) <other parameter> + <other correlations with same syntax>
+	# Example: sys_b1 has a nominal correlation of 0.2 to sys_c2
+	#          this correlation should be scanned from -0.1 to 0.4
+	#    sys_b1 = (0.2 & -0.1 : 0.4) sys_c2
+	# or without a scan:
+	#    sys_b1 = (0.2) sys_c2
+	# more than one correlation:
+	sys_a1 = (0.2 & -0.9 : 0.9) sys_c2 + (0 & -0.9 : 0.9) sys_b2
+	
+[end correlations]
