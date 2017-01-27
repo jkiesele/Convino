@@ -340,7 +340,7 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelationsIndep(std
 
 			TGraphAsymmErrors * gminchi2=new TGraphAsymmErrors(comb.size(), &scan.at(0), &minchi2.at(0),
 					&zero.at(0), &zero.at(0), &zero.at(0), &zero.at(0));
-			applyGraphCosmetics(gminchi2,gc_minchi2,s.low,s.high, "min#chi^2",scanned,2.5);
+			applyGraphCosmetics(gminchi2,gc_minchi2,s.low,s.high, "min#chi^2",scanned);
 			gminchi2->SetName("min#chi^{2}");
 			gminchi2->SetTitle("min#chi^{2}");
 			gminchi2->GetYaxis()->SetTitle("min#chi^{2}");
@@ -372,16 +372,18 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelationsIndep(std
 				cv.Print((TString)outdir+"/"+nominal.getCombNames().at(obs)+"_"+scannedacomp+"_"+scannedbcomp +".pdf");
 
 				cv.Clear();
-				applyGraphCosmetics(g,gc_scancombined,s.low,s.high,graphname,scanned,2.5);
+				applyGraphCosmetics(g,gc_scancombinedUP,s.low,s.high,graphname,scanned,2.05);
 				cv.Divide(1,2);
 				TVirtualPad * pad=cv.cd(1);
-				pad->SetBottomMargin(0.025);
+				pad->SetBottomMargin(0.015);
 				pad->SetLeftMargin(.15);
+				pad->SetTopMargin(.189);
 				g->Draw("Aa3pl");
 				gnom.Draw("Pe");
 
+				applyGraphCosmetics(gminchi2,gc_minchi2,s.low,s.high, "min#chi^2",scanned,2.05);
 				pad=cv.cd(2);
-				pad->SetBottomMargin(0.35);
+				pad->SetBottomMargin(0.293);
 				pad->SetTopMargin(0.025);
 				pad->SetLeftMargin(.15);
 				gminchi2->Draw("Al");
