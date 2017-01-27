@@ -24,7 +24,6 @@ void coutHelp(){
 	std::cout << "\n-s              enable scan of correlation assumptions\n";
 	std::cout << "\n-p              create plots for the correlation scans in .pdf format\n";
 	std::cout << "                (a directory will be created)\n";
-	std::cout << "\n-t              matrix resolve threshold\n";
 	std::cout << "\n--neyman        use neyman chi2 (faster)\n";
 	std::cout << "\n--prefix <pref> define a prefix for the output files/directories\n";
 	std::cout << std::endl;
