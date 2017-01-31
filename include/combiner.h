@@ -34,52 +34,66 @@ class fitfunctionBase;
 class combiner{
 	friend class fitfunctionBase;
 public:
-	combiner():lh_mod_(lh_mod_neyman),npars_(0),nest_(0),lowestchi2_(1e19),isdifferential_(false),hasUF_(false),hasOF_(false)
-	{}
+	combiner():lh_mod_(lh_mod_neyman),npars_(0),nest_(0),lowestchi2_(1e19),isdifferential_(false),hasUF_(false),hasOF_(false){}
 	~combiner(){clear();}
-
-
 	enum lh_mod{lh_mod_neyman,lh_mod_pearson};
 
-
+	/// ---- C++ interface -----
+	/**
+	 * Defines the mode, options:
+	 * - combiner::lh_mod_neyman
+	 * - combiner::lh_mod_pearson
+	 */
 	void setMode(lh_mod m){
 		lh_mod_=m;
 	}
 
 
+	/**
+	 * Adds a measurement object to the
+	 * combiner such that it can be combined
+	 * with another measurement
+	 */
 	void addMeasurement( measurement);
 
-	void associate(const TString & a, const TString& outname);
-
-
-	void printCorrelationMatrix()const;
-
-	void readConfigFile(const std::string & filename);
 
 	/**
 	 * Will be prepended to each output file
 	 */
 	void setOutputPrefix(const std::string& prefix){outprefix_=prefix+"_";}
 
-	static bool debug;
-
-	//void setResolveThreshold(double thresh){resolvethresh_=thresh;}
-
-	combinationResult combine()const;
 	/**
-	 * scans the correlations in approx 0.1 steps independently of each other
-	 * Each will be varied while the others are kept at their nominal values
-	 *
-	 * returns a vector of combinationResult for each scanned uncertainty
+	 * Set the correlation assumption between uncertainties
+	 * of two measurements based on the uncertainty names.
+	 * Use this function preferably to avoid
+	 * wrongly-assigned correlations
 	 */
-	std::vector<std::vector<combinationResult> >
-	scanCorrelationsIndep(std::ostream& out, const combinationResult& nominal, const std::string& outdir="")const;
-
-
 	void setSystCorrelation(const TString & namea, const TString& nameb, const double& coeff);
 
+	/**
+	 * Set the correlation assumption between uncertainties
+	 * of two measurements based on the uncertainty names.
+	 * Use this function only if code performance is an issue.
+	 */
 	void setSystCorrelation(const size_t & idxa, const size_t& idxb, const double& coeff);
 
+	/**
+	 * Starts the combination procedure and returns a
+	 * combinationResult object that stores the result of the
+	 * combination and all input paramters.
+	 */
+	combinationResult combine()const;
+
+
+
+	///// ----- helpers for text-based interface -----
+	void readConfigFile(const std::string & filename);
+	std::vector<std::vector<combinationResult> >
+	scanCorrelationsIndep(std::ostream& out, const combinationResult& nominal, const std::string& outdir="")const;
+	void printCorrelationMatrix()const;
+	void associate(const TString & a, const TString& outname);
+
+	static bool debug;
 private:
 
 
