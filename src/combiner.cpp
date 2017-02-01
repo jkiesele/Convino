@@ -630,7 +630,10 @@ void combiner::setSystCorrelation(const TString & namea, const TString& nameb, c
 	setSystCorrelation(idxa,idxb,coeff);
 }
 void combiner::setSystCorrelation(const size_t & idxa, const size_t& idxb, const double& coeff){
-	external_correlations_.setEntry(idxa,idxb, coeff);
+    double usecoeff=coeff;
+    if(usecoeff>maxcorr_)usecoeff=maxcorr_;
+    if(usecoeff<-maxcorr_)usecoeff=-maxcorr_;
+	external_correlations_.setEntry(idxa,idxb, usecoeff);
 }
 
 
