@@ -187,6 +187,8 @@ void measurement::readFromFile(const std::string& infile){
 				parameter pe;
 				pe.setType(parameter::para_estimate);
 				pe.setStat(stat.at(e));
+				if(!stat.at(e))
+				    throw std::logic_error("measurement::readFromFile: statistical uncertainty of at least one estimate 0. Check the input.");
 				pe.setName(estnames.at(e));
 				paras_.push_back(pe);
 			}
