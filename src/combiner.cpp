@@ -22,6 +22,9 @@
 #include "TStyle.h"
 #include "fitfunction.h"
 
+#ifdef USE_MP
+#include <omp.h>
+#endif
 
 
 /*
@@ -261,6 +264,11 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelationsIndep(std
 
 		//MP support here is still experimental
 
+#ifdef USE_MP
+		size_t maxthreads=omp_get_max_threads();
+		omp_set_num_threads(std::min(s->steps,maxthreads));
+#pragma omp parallel for
+#endif
 		for(size_t i=0;i<=s->steps;i++){
 			double value=s->low+ (double)i*range/(double)s->steps;
 			try{
@@ -269,24 +277,23 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelationsIndep(std
 				combcp.setSystCorrelation(s->idxa,s->idxb,value);
 				result=combcp.combine();
 
+#pragma omp critical (scanresult)
 				{ //critical section for multithreading (in case implemented at some point)
 					resforthisscan.at(i)=(result);
-
 					value=result.getInputSysCorrelations().getEntry(s->idxa,s->idxb);
 					//std::cout << value <<std::endl;
 					corrforthis.at(i)=(value);
-
 					//write to file
 					result.printSimpleInfo(out);
-
 				}
 			}catch(std::exception& e){
-				std::cout << e.what() << std::endl;
-
-				std::cout << "scanning for one point (" << value << ") failed. Please check the scan plots carefully." ;
-				if(i<s->steps)
-					std::cout << "Proceeding to next point.\n" <<std::endl;
-
+#pragma omp critical (scanresult_execpt)
+				{
+					std::cout << e.what() << std::endl;
+					std::cout << "scanning for one point (" << value << ") failed. Please check the scan plots carefully." ;
+					if(i<s->steps)
+						std::cout << "Proceeding to next point.\n" <<std::endl;
+				}
 			}
 
 		}
@@ -630,9 +637,9 @@ void combiner::setSystCorrelation(const TString & namea, const TString& nameb, c
 	setSystCorrelation(idxa,idxb,coeff);
 }
 void combiner::setSystCorrelation(const size_t & idxa, const size_t& idxb, const double& coeff){
-    double usecoeff=coeff;
-    if(usecoeff>maxcorr_)usecoeff=maxcorr_;
-    if(usecoeff<-maxcorr_)usecoeff=-maxcorr_;
+	double usecoeff=coeff;
+	if(usecoeff>maxcorr_)usecoeff=maxcorr_;
+	if(usecoeff<-maxcorr_)usecoeff=-maxcorr_;
 	external_correlations_.setEntry(idxa,idxb, usecoeff);
 }
 

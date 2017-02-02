@@ -27,11 +27,11 @@ void fitfunctionBase::eval(const double*x, double& f, double* df)const{
 	const std::vector<measurement>& meass=c->measurements_;
 	size_t nmeas=meass.size();
 
-#ifdef USE_MP
-	size_t maxthreads=omp_get_max_threads();
-	omp_set_num_threads(std::min(nmeas,maxthreads));
-#pragma omp parallel for reduction(+:f)
-#endif
+//#ifdef USE_MP
+//	size_t maxthreads=omp_get_max_threads();
+//	omp_set_num_threads(std::min(nmeas,maxthreads));
+//#pragma omp parallel for reduction(+:f)
+//#endif
 	for(size_t i=0;i<nmeas;i++){
 		double f_local=meass.at(i).evaluate(x,df,c->lh_mod_==combiner::lh_mod_pearson,nDim());
 		f+=f_local;
