@@ -2,7 +2,7 @@ CPP_FILES := $(wildcard src/*.cpp)
 OBJ_FILES := $(addprefix obj/,$(notdir $(CPP_FILES:.cpp=.o)))
 LD_FLAGS := `root-config --cflags --glibs` -lMinuit -lMathMore -lMinuit2 
 CC_FLAGS := -fPIC -Wall `root-config --cflags`
-CC_FLAGS += -I./include -O3 
+CC_FLAGS += -I./include -O2 
 
 
 ifeq ($(USE_MP),true)
