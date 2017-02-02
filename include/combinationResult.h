@@ -153,6 +153,13 @@ public:
 		return post_sys_correlations_;
 	}
 
+	/**
+	 * Reduces the stored information to combined values, combined names
+	 * and the uncertainties, only. Deletes all matrices, pulls and
+	 * constraints on uncertainties.
+	 */
+	void reduce();
+
 protected:
 	std::vector<TString> combnames_;
 	std::vector<double> combined_, comberrup_,comberrdown_;

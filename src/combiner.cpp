@@ -36,8 +36,59 @@
  */
 
 
+//small helper class
+class scanresults{
+public:
+	void addResult(const combinationResult& r, float coeff){
+		res_.push_back(r);
+		coeffs_.push_back(coeff);
+	}
+	void sort(){
+		if(coeffs_.size()<1)return;
+
+		bool notdone=true;
+		std::vector<combinationResult> sortedres;
+		std::vector<float> sortedcoeffs;
+		std::vector<size_t> used;
+		size_t smallestidx=0;
+		while(notdone){
+			double smallest=1.1;
+			for(size_t i=0;i<coeffs_.size();i++){
+				if(std::find(used.begin(),used.end(),i)!=used.end())continue;
+				if(coeffs_.at(i)<smallest){
+					smallest=coeffs_.at(i);
+					smallestidx=i;
+				}
+			}
+			sortedres.push_back(res_.at(smallestidx));
+			sortedcoeffs.push_back(coeffs_.at(smallestidx));
+			used.push_back(smallestidx);
+			if(used.size() == res_.size()) notdone=false;
+		}
+		res_=sortedres;
+		coeffs_=sortedcoeffs;
+	}
+	void clear(){
+		res_.clear();
+		coeffs_.clear();
+	}
+	combinationResult& at(size_t i){return res_.at(i);}
+	const combinationResult& at(size_t i)const{return res_.at(i);}
+
+	float& C_at(size_t i){return coeffs_.at(i);}
+	const float& C_at(size_t i)const{return coeffs_.at(i);}
+
+	size_t size()const{return res_.size();}
+
+	const std::vector<combinationResult>& getVector()const{return res_;}
+private:
+	std::vector<combinationResult> res_;
+	std::vector<float> coeffs_;
+};
+
 
 bool combiner::debug=false;
+bool combiner::dummyrun_=true;
 const double combiner::maxcorr_=0.9999;
 
 
@@ -148,11 +199,7 @@ void combiner::readConfigFile(const std::string & filename){
 				cscan.low=atof(range.at(0).data());
 				cscan.high=atof(range.at(1).data());
 
-				cscan.steps= (int)(10*fabs(cscan.high-cscan.low));
-				if(cscan.steps<=3)
-					cscan.steps=4; //at least 4 steps
-				if(cscan.steps>7)
-					cscan.steps=7; //at least 4 steps
+				cscan.steps=4;// fixed. suffices
 			}
 			syst_scanranges_.push_back(cscan);
 		}
@@ -242,65 +289,96 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelationsIndep(std
 	 * First part:
 	 *   Do the scan and save output to temp
 	 */
+	const size_t nscans=syst_scanranges_.size();
+	if(nscans<1)
+		return std::vector<std::vector<combinationResult> > ();
 
 
-	std::vector<std::vector<combinationResult> >results;
-	std::vector<std::vector<float > > correlations;
-	const size_t nobs=tobecombined_.size();
 
-	for(std::vector<correlationscan>::const_iterator s=syst_scanranges_.begin();s!=syst_scanranges_.end();s++){
-		//s->steps;
+	//fully serialise for parallelisation
+	std::vector<const correlationscan* > scanps;
+	std::vector<double> scanvs;
+	for(size_t ss=0;ss<nscans;ss++){
+		const correlationscan* s= &syst_scanranges_.at(ss);
 		double range=s->high-s->low;
-
-
-		//make sure nominal point is in there for reference
-		if(! s->steps) continue;
-
-		out << "\nscanning " <<  external_correlations_.getEntryName(s->idxa) <<
-				" || " << external_correlations_.getEntryName(s->idxb)  << "...\n"<<std::endl;
-
-		std::vector<combinationResult> resforthisscan(s->steps+1);
-		std::vector<float > corrforthis(s->steps+1);
-
-		//MP support here is still experimental
-
-#ifdef USE_MP
-		size_t maxthreads=omp_get_max_threads();
-		omp_set_num_threads(std::min(s->steps,maxthreads));
-#pragma omp parallel for
-#endif
 		for(size_t i=0;i<=s->steps;i++){
 			double value=s->low+ (double)i*range/(double)s->steps;
-			try{
-				combinationResult result;
-				combiner combcp=*this;
-				combcp.setSystCorrelation(s->idxa,s->idxb,value);
-				result=combcp.combine();
+			scanps.push_back(s);
+			scanvs.push_back(value);
+		}
+	}
 
-#pragma omp critical (scanresult)
-				{ //critical section for multithreading (in case implemented at some point)
-					resforthisscan.at(i)=(result);
-					value=result.getInputSysCorrelations().getEntry(s->idxa,s->idxb);
-					//std::cout << value <<std::endl;
-					corrforthis.at(i)=(value);
-					//write to file
-					result.printSimpleInfo(out);
-				}
-			}catch(std::exception& e){
-#pragma omp critical (scanresult_execpt)
-				{
-					std::cout << e.what() << std::endl;
-					std::cout << "scanning for one point (" << value << ") failed. Please check the scan plots carefully." ;
-					if(i<s->steps)
-						std::cout << "Proceeding to next point.\n" <<std::endl;
-				}
+	std::vector<combinationResult> ress(scanps.size());
+
+	int ndone=0;
+#ifdef USE_MP
+#pragma omp parallel for
+#endif
+	for(size_t i=0;i<scanps.size();i++){
+		bool success=true;
+		combinationResult result;
+		try{
+			combiner combcp=*this;
+			combcp.setSystCorrelation(scanps.at(i)->idxa,scanps.at(i)->idxb,scanvs.at(i));
+			result=combcp.combine();
+			if(dummyrun_)
+				sleep(5); //for MP debugging
+			ndone++;
+		}catch(std::exception& e){
+#ifdef USE_MP
+#pragma omp critical (cout)
+#endif
+			{
+				std::cout << e.what() << std::endl;
+				std::cout <<  external_correlations_.getEntryName(scanps.at(i)->idxa) << ", " << external_correlations_.getEntryName(scanps.at(i)->idxb) <<std::endl;
+				std::cout << "scanning for one point (" << scanvs.at(i) << ") failed. Please check the scan plots carefully." ;
+				success=false;
+				ndone++;
 			}
+		}
+		if(success){
+#ifdef USE_MP
+#pragma omp critical (scanpointresult)
+#endif
+			{
+				ress.at(i)=result;
+			}
+#ifdef USE_MP
+#pragma omp critical (cout)
+#endif
+			{
+				std::cout << "\nscan progress: " << (int)((float)ndone/(float)scanvs.size()*100)<<"%" <<std::endl;
+			}
+		}
+	}
 
+	std::vector<scanresults >results;
+	//order
+	for(size_t ss=0;ss<nscans;ss++){
+		const correlationscan* s= &syst_scanranges_.at(ss);
+		scanresults resforthisscan;
+		for(size_t i=0;i<scanps.size();i++){
+			if(scanps.at(i) == s){
+				if(ress.at(i).getNCombined()) //combination has not failed
+					resforthisscan.addResult(ress.at(i),scanvs.at(i));
+			}
+		}
+		resforthisscan.sort();
+		out << "\nscanned " <<  external_correlations_.getEntryName(s->idxa) <<
+				" || " << external_correlations_.getEntryName(s->idxb)  << "...\n"<<std::endl;
+		for(size_t i=0;i<resforthisscan.size();i++){
+			out << "rho = "<< resforthisscan.C_at(i) <<std::endl;
+			resforthisscan.at(i).printResultOnly(out);
 		}
 		results.push_back(resforthisscan);
-		correlations.push_back(corrforthis);
-
 	}
+	ress.clear();//free some mem before plotting
+
+
+	//old
+
+	const size_t nobs=tobecombined_.size();
+
 
 	/*
 	 * Second part:
@@ -309,9 +387,11 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelationsIndep(std
 	TFile * tfile=new TFile((TString)outprefix_+"scanPlots.root","RECREATE");
 
 	for(size_t i=0;i<results.size();i++){
-		const correlationscan & s=syst_scanranges_.at(i);
-		const TString & scanneda= external_correlations_.getEntryName(s.idxa);
-		const TString & scannedb= external_correlations_.getEntryName(s.idxb);
+		const correlationscan * s= & syst_scanranges_.at(i);
+		const TString & scanneda= external_correlations_.getEntryName(s->idxa);
+		const TString & scannedb= external_correlations_.getEntryName(s->idxb);
+		TString scannedacomp=textFormatter::makeCompatibleFileName(scanneda.Data() );
+		TString scannedbcomp=textFormatter::makeCompatibleFileName(scannedb.Data() );
 		TString scanned="#rho("+scanneda+", "+scannedb+")";
 		for(size_t obs=0;obs<nobs;obs++){
 			/*
@@ -323,14 +403,15 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelationsIndep(std
 			for(size_t j=0;j<results.at(i).size();j++){
 				const combinationResult& result=results.at(i).at(j);
 
-				if(result.getNCombined() != nobs)//sanity check for debugging
-					throw std::logic_error("combiner::scanCorrelations: fatal error. not all (or too many) combined results");
-
+				if(result.getNCombined() != nobs){//sanity check for debugging
+					TString errstr=nominal.getCombNames().at(obs)+"_"+scannedacomp+"_"+scannedbcomp ;
+					throw std::logic_error("combiner::scanCorrelations: fatal error. not all (or too many) combined results: "+(std::string)errstr.Data());
+				}
 				comb.push_back(result.combined_.at(obs));
 				errup.push_back(result.comberrup_.at(obs));
 				errdown.push_back(-result.comberrdown_.at(obs));
 				minchi2.push_back(result.getChi2min());
-				scan.push_back(correlations.at(i).at(j));
+				scan.push_back(results.at(i).C_at(j));
 				zero.push_back(0);
 			}
 			/*
@@ -340,14 +421,14 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelationsIndep(std
 					&zero.at(0), &zero.at(0), &errup.at(0), &errdown.at(0));
 
 			g->GetYaxis()->SetTitle(tobecombined_.at(obs).first);
-			applyGraphCosmetics(g,gc_scancombined,s.low,s.high,graphname,scanned);
+			applyGraphCosmetics(g,gc_scancombined,s->low,s->high,graphname,scanned);
 			g->SetName(graphname);
 			g->SetTitle(graphname);
 			g->Write();
 
 			TGraphAsymmErrors * gminchi2=new TGraphAsymmErrors(comb.size(), &scan.at(0), &minchi2.at(0),
 					&zero.at(0), &zero.at(0), &zero.at(0), &zero.at(0));
-			applyGraphCosmetics(gminchi2,gc_minchi2,s.low,s.high, "min#chi^2",scanned);
+			applyGraphCosmetics(gminchi2,gc_minchi2,s->low,s->high, "min#chi^2",scanned);
 			gminchi2->SetName("min#chi^{2}");
 			gminchi2->SetTitle("min#chi^{2}");
 			gminchi2->GetYaxis()->SetTitle("min#chi^{2}");
@@ -364,22 +445,20 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelationsIndep(std
 
 				gStyle->SetOptTitle(0);
 
-				double nomcorr= nominal.getInputSysCorrelations().getEntry(s.idxa,s.idxb);
+				double nomcorr= nominal.getInputSysCorrelations().getEntry(s->idxa,s->idxb);
 				double nomerrd=-nominal.getCombErrdown().at(obs);
 				TGraphAsymmErrors gnom(1, &nomcorr, &nominal.getCombined().at(obs),
 						&zero.at(0), &zero.at(0), &nominal.getCombErrup().at(obs), &nomerrd);
 
-				applyGraphCosmetics(&gnom,gc_nominal,s.low,s.high,graphname+"_nom",scanned);
+				applyGraphCosmetics(&gnom,gc_nominal,s->low,s->high,graphname+"_nom",scanned);
 				cv.Draw();
 				g->Draw("Aa3pl");
 				gnom.Draw("Pe");
-				TString scannedacomp=textFormatter::makeCompatibleFileName(scanneda.Data() );
-				TString scannedbcomp=textFormatter::makeCompatibleFileName(scannedb.Data() );
 
 				cv.Print((TString)outdir+"/"+nominal.getCombNames().at(obs)+"_"+scannedacomp+"_"+scannedbcomp +".pdf");
 
 				cv.Clear();
-				applyGraphCosmetics(g,gc_scancombinedUP,s.low,s.high,graphname,scanned,2.05);
+				applyGraphCosmetics(g,gc_scancombinedUP,s->low,s->high,graphname,scanned,2.05);
 				cv.Divide(1,2);
 				TVirtualPad * pad=cv.cd(1);
 				pad->SetBottomMargin(0.015);
@@ -388,7 +467,7 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelationsIndep(std
 				g->Draw("Aa3pl");
 				gnom.Draw("Pe");
 
-				applyGraphCosmetics(gminchi2,gc_minchi2,s.low,s.high, "min#chi^2",scanned,2.05);
+				applyGraphCosmetics(gminchi2,gc_minchi2,s->low,s->high, "min#chi^2",scanned,2.05);
 				pad=cv.cd(2);
 				pad->SetBottomMargin(0.293);
 				pad->SetTopMargin(0.025);
@@ -408,7 +487,10 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelationsIndep(std
 
 	tfile->Close();
 	delete tfile;
-	return results;
+	std::vector<std::vector<combinationResult> > vout;
+	for(const auto& r:results)
+		vout.push_back(r.getVector());
+	return vout;
 }
 
 
@@ -493,6 +575,7 @@ combinationResult combiner::combinePriv(){
 	 */
 
 	simpleFitter fitter;
+	fitter.setOnlyRunDummy(dummyrun_);
 	fitter.setParameters(fitparas,steps);
 	for(size_t i=0;i<fitparas.size();i++){
 		if(i>=nsys){
@@ -541,19 +624,19 @@ combinationResult combiner::combinePriv(){
 	//	out.post_sys_correlations_=syst_correlations_;
 	out.chi2min_=fitter.getChi2Min();
 
-	//DEBUG if(debug)
-	std::cout << "combined (minL="<<fitter.getChi2Min()<<"):"<<std::endl;
+	if(debug)
+		std::cout << "combined (minL="<<fitter.getChi2Min()<<"):"<<std::endl;
 
 
 
 	out.post_meas_correlations_=correlationMatrix(combnames);
 	for(size_t i=0;i<ncomb;i++){
 		size_t idx=nsyst+i;
-		//DEBUGif(debug){
-		std::cout << fitter.getParameterNames()->at(idx) << ": " << fitter.getParameter(idx)<<
-				" +" <<  fitter.getParameterErrUp()->at(idx) << " "
-				<<  fitter.getParameterErrDown()->at(idx) <<std::endl;
-		//DEBUG}
+		if(debug){
+			std::cout << fitter.getParameterNames()->at(idx) << ": " << fitter.getParameter(idx)<<
+					" +" <<  fitter.getParameterErrUp()->at(idx) << " "
+					<<  fitter.getParameterErrDown()->at(idx) <<std::endl;
+		}
 		out.combined_.push_back(fitter.getParameter(idx));
 		out.comberrup_.push_back(fitter.getParameterErrUp()->at(idx));
 		out.comberrdown_.push_back(fitter.getParameterErrDown()->at(idx));

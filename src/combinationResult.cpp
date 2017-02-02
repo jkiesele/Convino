@@ -55,8 +55,8 @@ void combinationResult::printFullInfo(std::ostream& out)const{
 		out << textFormatter::fixLength(toString(pulls_.at(i)),4) << "   ";
 		out << textFormatter::fixLength(toString(constraints_.at(i)),4) << std::endl;
 	}
-//	out << "\nmatrix differences (up to 0.01)\n";
-//	printDifferenceList(out,0.01);
+	//	out << "\nmatrix differences (up to 0.01)\n";
+	//	printDifferenceList(out,0.01);
 
 }
 
@@ -107,5 +107,17 @@ void combinationResult::fillTGraphAsymmErrors(TGraphAsymmErrors* h, bool cutUFOF
 		h->SetPointEYlow(i, fabs(comberrdown_.at(i+start) ) );
 		h->SetPointEYhigh(i, comberrup_.at(i+start));
 	}
+
+}
+
+
+void combinationResult::reduce(){
+
+	orig_sys_correlations_.clear();
+	orig_meas_correlations_.clear();
+	post_sys_correlations_.clear();
+	post_meas_correlations_.clear();
+	pulls_.clear();
+	constraints_.clear();
 
 }

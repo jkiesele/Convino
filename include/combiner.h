@@ -170,6 +170,8 @@ private:
 	bool isdifferential_,hasUF_,hasOF_;
 
 	static const double maxcorr_;
+
+	static bool dummyrun_;//< for debugging purposes
 };
 
 
