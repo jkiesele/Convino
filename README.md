@@ -2,4 +2,6 @@ The Convino program allows to combine measurements obtained with simultaneous nu
 
 For a complete description of the method and the program, see [1].
 
+The manual can be found in the directory “docu”.
+
 [1] J. Kieseler, "A new method and program for the combination of measurements obtained with simultaneous nuisance parameter fits", to appear
