@@ -322,7 +322,7 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelationsIndep(std
 			combcp.setSystCorrelation(scanps.at(i)->idxa,scanps.at(i)->idxb,scanvs.at(i));
 			result=combcp.combine();
 			if(dummyrun_)
-				sleep(5); //for MP debugging
+				//sleep(5); //for MP debugging
 			ndone++;
 		}catch(std::exception& e){
 #ifdef USE_MP
