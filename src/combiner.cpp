@@ -89,7 +89,7 @@ private:
 
 bool combiner::debug=false;
 bool combiner::dummyrun_=false;
-const double combiner::maxcorr_=0.9999;
+const double combiner::maxcorr_=0.999;
 
 
 
