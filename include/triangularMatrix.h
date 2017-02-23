@@ -25,6 +25,7 @@ class triangularMatrix{
 public:
 	triangularMatrix(const size_t &, double def=0);
 	triangularMatrix(const std::vector<TString>&, double def=0);
+	triangularMatrix(const std::vector<std::vector<double> > &);
 	triangularMatrix(){}
 
 	bool operator ==(const triangularMatrix&)const;
@@ -57,6 +58,11 @@ public:
 	void clear();
 
 	void removeSmallEntries(double threshold=0.1);
+
+	/**
+	 * converts e.g. a covariance matrix to a correlation matrix
+	 */
+	void normalize();
 
 	double maxDifference(const triangularMatrix& rhs)const;
 	double FrobeniusDistance(const triangularMatrix& rhs)const;

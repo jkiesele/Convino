@@ -31,6 +31,27 @@ triangularMatrix::triangularMatrix(const std::vector<TString>& names, double def
 	entries_.resize(size,def);
 }
 
+triangularMatrix::triangularMatrix(const std::vector<std::vector<double> > & v){
+
+	if(v.size()<1)
+		return;
+	size_t tsszie=v.size();
+	if(v.size()!=v.at(0).size())
+		throw std::runtime_error("triangularMatrix::triangularMatrix: input vector<vector> must be symmetric");
+	for(size_t i=0;i<tsszie;i++){
+		TString tmp=toTString(i);
+		names_.push_back(tmp);
+	}
+	const size_t & N=names_.size();
+	size_t size=(N+1)*N/2;
+	entries_.resize(size);
+
+	for(size_t i=0;i<tsszie;i++){
+		for(size_t j=i;j<tsszie;j++)
+			setEntry(i,j,v.at(i).at(j));
+	}
+
+}
 
 bool triangularMatrix::operator ==(const triangularMatrix& rhs)const{
 	return !(*this!=rhs);
@@ -51,7 +72,7 @@ const size_t& triangularMatrix::getEntryIndex(const TString& name)const{
 	return names_.getIndex(name);
 }
 
- size_t triangularMatrix::getEntryIndexUS(const TString& name)const{
+size_t triangularMatrix::getEntryIndexUS(const TString& name)const{
 	size_t idx=names_.getIndex(name);
 	if(idx>=names_.size())
 		return SIZE_MAX;
@@ -138,6 +159,23 @@ void triangularMatrix::removeSmallEntries(double threshold){
 	}
 
 
+}
+
+void triangularMatrix::normalize(){
+	TMatrixD m2;
+	toTMatrix(m2);
+	TMatrixD diag(size(),size());
+	for(int l=0;l<size();l++){
+		double entr=getEntry(l,l);
+		if(entr>0)
+			diag[l][l] = 1/sqrt(getEntry(l,l));
+		else
+			throw std::runtime_error("triangularMatrix::normalize: only for >0 diagonal elements");
+	}
+	m2*=diag;
+	diag*=m2;
+	m2=diag;
+	importTMatrix(m2);
 }
 
 double triangularMatrix::maxDifference(const triangularMatrix& rhs)const{
