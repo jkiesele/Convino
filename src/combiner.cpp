@@ -493,6 +493,14 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
 
     tfile->Close();
     delete tfile;
+
+    for(const auto& sv:results){
+        for(const auto& s:sv){
+            s.printFullInfo(out);
+        }
+    }
+
+
     return results;
 }
 

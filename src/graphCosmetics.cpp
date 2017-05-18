@@ -51,7 +51,7 @@ void applyGraphCosmetics(TGraphAsymmErrors* g, graphcosmetics c, double xlow, do
 
 	}
 	if(c==gc_multiscan || c==gc_minchi2multiscan){
-	    g->GetXaxis()->SetLabelSize(0);
+	    //maybe additions
 	}
 
 
