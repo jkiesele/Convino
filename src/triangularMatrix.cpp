@@ -165,7 +165,7 @@ void triangularMatrix::normalize(){
 	TMatrixD m2;
 	toTMatrix(m2);
 	TMatrixD diag(size(),size());
-	for(int l=0;l<size();l++){
+	for(int l=0;l<(int)size();l++){
 		double entr=getEntry(l,l);
 		if(entr>0)
 			diag[l][l] = 1/sqrt(getEntry(l,l));

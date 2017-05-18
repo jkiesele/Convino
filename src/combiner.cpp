@@ -311,10 +311,10 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
     int ndone=0;
 
     //parallelise the main loop here - retains ordering, but not optimal parallelisation
+    bool success=true;    
 #ifdef USE_MP
 #pragma omp parallel for
 #endif
-    bool success=true;
     for(size_t i=0;i<syst_scanranges_.size();i++){
 
         std::vector<combinationResult> thisscan(single_correlationscan::nPoints());
