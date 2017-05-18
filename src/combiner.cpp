@@ -311,7 +311,7 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
     int ndone=0;
 
     //parallelise the main loop here - retains ordering, but not optimal parallelisation
-    bool success=true;    
+
 #ifdef USE_MP
 #pragma omp parallel for
 #endif
@@ -327,10 +327,10 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
                         syst_scanranges_.at(i).get(j).idxb,
                         syst_scanranges_.at(i).get(j).scanVal(step));
             }
+            combinationResult res;
             try{
-                combinationResult res=combcp.combine();
-                thisscan.at(step)=res;
-                ndone++;
+                res=combcp.combine();
+
 #ifdef USE_MP
 #pragma omp critical (cout)
 #endif
@@ -338,8 +338,10 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
                     std::cout << "performed "<< ndone << " of "<< syst_scanranges_.size()*single_correlationscan::nPoints() << " scans."<<std::endl;
                 }
             }catch(...){
-                success=false;
+                std::cout << "one scan point for "<< syst_scanranges_.at(i).name() <<" failed, ignoring" <<std::endl;
             }
+            thisscan.at(step)=res;
+            ndone++;
         }
 #ifdef USE_MP
 #pragma omp critical (scanpointresult)
@@ -349,9 +351,6 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
         }
     }
 
-    if(!success){
-        throw std::runtime_error("scan not successful. Likely, one scan point is ill defined. Please check the printout");
-    }
 
 
     //old
@@ -380,6 +379,7 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
             std::vector<double> minchi2;
             for(size_t j=0;j<results.at(i).size();j++){
                 const combinationResult& result=results.at(i).at(j);
+                if(result.getCombNames().size()<1) continue; //ignore failed scans
 
                 if(result.getNCombined() != nobs){//sanity check for debugging
                     TString errstr=nominal.getCombNames().at(obs)+"_"+name ;
