@@ -373,6 +373,9 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
         //const correlationscan * s= & syst_scanranges_.at(i);
         const TString & name= syst_scanranges_.at(i).name() ;
         TString filename=textFormatter::makeCompatibleFileName(name.Data());
+        if(filename.Length()>100)
+            filename=TString(filename,100);
+        filename+=i;
 
         for(size_t obs=0;obs<nobs;obs++){
             /*
