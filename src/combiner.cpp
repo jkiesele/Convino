@@ -338,7 +338,11 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
                     std::cout << "performed "<< ndone << " of "<< syst_scanranges_.size()*single_correlationscan::nPoints() << " scans."<<std::endl;
                 }
             }catch(...){
-                std::cout << "one scan point for "<< syst_scanranges_.at(i).name() <<" failed, ignoring" <<std::endl;
+                std::cout << "one scan point for "<< syst_scanranges_.at(i).name() <<" failed: ";
+                for(size_t j=0;j<syst_scanranges_.at(i).size();j++){
+                    std::cout  << syst_scanranges_.at(i).get(j).scanVal(step) << " ";
+                }
+                std::cout  <<"ignoring" <<std::endl;
             }
             thisscan.at(step)=res;
             ndone++;

@@ -117,7 +117,7 @@ private:
             return low+ (double)i*(high-low)/(double)(nPoints()-1);
         }
         static size_t nPoints(){
-            return 4;
+            return 6;
         }
         size_t idxa,idxb;
         float nominal;
