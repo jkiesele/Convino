@@ -107,9 +107,9 @@ int main(int argc, char* argv[]){
 	if(doscan){
 		std::ofstream logfilescan((outputprefix+"scan_result.txt").data());
 		if(writeScanPlotPdfs)
-			comb.scanCorrelationsIndep(logfilescan,result,(outputprefix+"scan_results").data());
+			comb.scanCorrelations(logfilescan,result,(outputprefix+"scan_results").data());
 		else
-			comb.scanCorrelationsIndep(logfilescan,result);
+			comb.scanCorrelations(logfilescan,result);
 		logfilescan.close();
 	}
 

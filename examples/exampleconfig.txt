@@ -41,10 +41,13 @@ The other blocks are commented individually
 	# parameter = (<nominal correlation> & <scan from> : <to>) <other parameter> + <other correlations with same syntax>
 	# Example: sys_b1 has a nominal correlation of 0.2 to sys_c2
 	#          this correlation should be scanned from -0.1 to 0.4
-	#    sys_b1 = (0.2 & -0.1 : 0.4) sys_c2
+	
+	sys_a1 =  (0 & -0.9 : 0.9) sys_b2
 	# or without a scan:
 	#    sys_b1 = (0.2) sys_c2
-	# more than one correlation:
-	sys_a1 = (0.2 & -0.9 : 0.9) sys_c2 + (0 & -0.9 : 0.9) sys_b2
+	# more than one correlation simultaneously:
+	
+	sys_a1 = (0.2 & -0.9 : 0.9) sys_c2 + (0.2 & 0.4 : -0.4) sys_c1 
+	
 	
 [end correlations]

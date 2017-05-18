@@ -10,7 +10,7 @@
 
 #include "TString.h"
 
-enum graphcosmetics {gc_nominal, gc_scancombined,gc_scancombinedUP, gc_minchi2};
+enum graphcosmetics {gc_nominal, gc_scancombined,gc_scancombinedUP, gc_minchi2,gc_multiscan,gc_minchi2multiscan};
 
 class TGraphAsymmErrors;
 

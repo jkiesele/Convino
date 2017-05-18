@@ -9,6 +9,7 @@
 #include "graphCosmetics.h"
 #include "TGraphAsymmErrors.h"
 #include "TAxis.h"
+#include "textFormatter.h"
 
 void applyGraphCosmetics(TGraphAsymmErrors* g, graphcosmetics c, double xlow, double xhigh, const TString & graphname, const TString & scanned,double scaler){
 
@@ -30,7 +31,7 @@ void applyGraphCosmetics(TGraphAsymmErrors* g, graphcosmetics c, double xlow, do
 		g->SetLineColor(kBlack);
 		g->SetLineWidth(2);
 	}
-	else if(c==gc_scancombined || c==gc_scancombinedUP){
+	else if(c==gc_scancombined || c==gc_scancombinedUP || gc_multiscan){
 		g->GetYaxis()->SetTitleOffset(1/scaler);
 		g->GetYaxis()->CenterTitle(true);
 	//	if(gc_scancombinedUP)
@@ -43,11 +44,14 @@ void applyGraphCosmetics(TGraphAsymmErrors* g, graphcosmetics c, double xlow, do
 		g->SetDrawOption("a3pl");
 
 	}
-	else if(c==gc_minchi2){
+	else if(c==gc_minchi2|| c==gc_minchi2multiscan){
 		g->GetYaxis()->SetTitleOffset(1/scaler);
 		g->GetYaxis()->CenterTitle(true);
 
 
+	}
+	if(c==gc_multiscan || c==gc_minchi2multiscan){
+	    g->GetXaxis()->SetLabelSize(0);
 	}
 
 
@@ -56,7 +60,26 @@ void applyGraphCosmetics(TGraphAsymmErrors* g, graphcosmetics c, double xlow, do
 	else
 		g->GetXaxis()->SetRangeUser(xhigh-0.1,xlow+0.1);
 
-	g->GetXaxis()->SetTitle(scanned);
+	std::string xaxis;
+	textFormatter tf;
+	tf.setDelimiter(",");
+	std::string first=tf.getFormatted(scanned.Data()).at(0);
+	std::string second=tf.getFormatted(scanned.Data()).at(1);
+
+	tf.setDelimiter("+");
+	std::vector<std::string> fmt=tf.getFormatted(second);
+
+	for(const auto& s:fmt){
+	    xaxis+="#rho(";
+	    xaxis+=first+",";
+	    xaxis+=s;
+	    xaxis+=")&";
+	}
+	xaxis=std::string(xaxis.begin(),xaxis.end()-1);
+	if(xaxis.length()>40)
+	    g->GetXaxis()->SetTitleSize(g->GetXaxis()->GetTitleSize()*(40./xaxis.length()));
+
+	g->GetXaxis()->SetTitle(xaxis.data());
 
 
 }

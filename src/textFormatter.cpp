@@ -189,6 +189,8 @@ std::string textFormatter::makeCompatibleFileName(const std::string &in){
 	std::replace( out.begin(), out.end(), ' ', '_');
 	std::replace( out.begin(), out.end(), '\\', '_');
 	std::replace( out.begin(), out.end(), '-', '_');
+    std::replace( out.begin(), out.end(), ',', '_');
+    std::replace( out.begin(), out.end(), '+', '_');
 	return out;
 }
 
