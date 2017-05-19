@@ -10,6 +10,7 @@
 #include "TGraphAsymmErrors.h"
 #include "TAxis.h"
 #include "textFormatter.h"
+#include "TStyle.h"
 
 void applyGraphCosmetics(TGraphAsymmErrors* g, graphcosmetics c, double xlow, double xhigh, const TString & graphname, const TString & scanned,double scaler){
 
@@ -39,9 +40,11 @@ void applyGraphCosmetics(TGraphAsymmErrors* g, graphcosmetics c, double xlow, do
 		g->SetMarkerColor(kBlack);
 		g->SetMarkerSize(0);
 		g->SetMarkerStyle(20);
-		g->SetFillColor(kBlack);
-		g->SetFillStyle(3002);
-		g->SetDrawOption("a3pl");
+		g->SetFillColor(kGray);
+		gStyle->SetHatchesLineWidth(1);
+		gStyle->SetHatchesSpacing(0.5);
+		g->SetFillStyle(3305);
+		g->SetDrawOption("l");
 
 	}
 	else if(c==gc_minchi2|| c==gc_minchi2multiscan){
@@ -69,6 +72,8 @@ void applyGraphCosmetics(TGraphAsymmErrors* g, graphcosmetics c, double xlow, do
 	tf.setDelimiter("+");
 	std::vector<std::string> fmt=tf.getFormatted(second);
 
+	if(fmt.size()>1)
+	    xaxis+="scan: ";
 	for(const auto& s:fmt){
 	    xaxis+="#rho(";
 	    xaxis+=first+",";

@@ -107,9 +107,9 @@ private:
     class single_correlationscan{
     public:
         single_correlationscan():
-            idxa(std::string::npos),idxb(std::string::npos),nominal(0),low(0),high(0),steps(10){}
+            idxa(std::string::npos),idxb(std::string::npos),nominal(0),low(0),high(0){}
         single_correlationscan(const size_t& cidxa,const size_t& cidxb,const float& cnominal, const float& clow, const float& chigh,  size_t csteps=10):
-            idxa(cidxa),idxb(cidxb),nominal(cnominal),low(clow),high(chigh),steps(csteps){}
+            idxa(cidxa),idxb(cidxb),nominal(cnominal),low(clow),high(chigh){}
 
         float scanVal(size_t i)const{
             if(i>nPoints())
@@ -123,7 +123,7 @@ private:
         float nominal;
         float low;
         float high;
-        size_t steps;
+
     };
     //very simple
     class correlationscan{

@@ -174,7 +174,7 @@ void combiner::readConfigFile(const std::string & filename){
             cscan.nominal=0;
             cscan.high=0;
             cscan.low=0;
-            cscan.steps=0;
+
 
             tf.setDelimiter(")");
             tf.setTrim(" (");
@@ -202,7 +202,7 @@ void combiner::readConfigFile(const std::string & filename){
                 cscan.low=atof(range.at(0).data());
                 cscan.high=atof(range.at(1).data());
 
-                cscan.steps=single_correlationscan::nPoints();// fixed. suffices
+
             }
             cscans.add(cscan);
             sysnames+=entry.at(1)+"+";
@@ -375,6 +375,7 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
         TString filename=textFormatter::makeCompatibleFileName(name.Data());
         if(filename.Length()>100)
             filename=TString(filename,100);
+        filename+="_";
         filename+=i;
 
         for(size_t obs=0;obs<nobs;obs++){
@@ -400,7 +401,7 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
                 if(syst_scanranges_.at(i).isSingle())
                     scan.push_back(syst_scanranges_.at(i).get(0).scanVal(j));
                 else
-                    scan.push_back(1./3.*(float)j);//no better way...
+                    scan.push_back(1./(single_correlationscan::nPoints()-1)*(float)j);//no better way...
                 zero.push_back(0);
             }
             /*
@@ -408,14 +409,23 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
              */
             TGraphAsymmErrors * g=new TGraphAsymmErrors(comb.size(), &scan.at(0), &comb.at(0),
                     &zero.at(0), &zero.at(0), &errup.at(0), &errdown.at(0));
+            TGraphAsymmErrors * gline=new TGraphAsymmErrors(comb.size(), &scan.at(0), &comb.at(0),
+                    &zero.at(0), &zero.at(0), &zero.at(0), &zero.at(0));
 
             g->GetYaxis()->SetTitle(tobecombined_.at(obs).first);
-            if(syst_scanranges_.at(i).isSingle())
+            if(syst_scanranges_.at(i).isSingle()){
                 applyGraphCosmetics(g,gc_scancombined,syst_scanranges_.at(i).getLowest(),
                         syst_scanranges_.at(i).getHighest(),graphname,name);
-            else
+                applyGraphCosmetics(gline,gc_scancombined,syst_scanranges_.at(i).getLowest(),
+                        syst_scanranges_.at(i).getHighest(),graphname,name);
+            }
+            else{
                 applyGraphCosmetics(g,gc_multiscan,syst_scanranges_.at(i).getLowest(),
                         syst_scanranges_.at(i).getHighest(),graphname,name);
+                applyGraphCosmetics(gline,gc_multiscan,syst_scanranges_.at(i).getLowest(),
+                        syst_scanranges_.at(i).getHighest(),graphname,name);
+
+            }
 
             g->SetName(graphname);
             g->SetTitle(graphname);
@@ -452,6 +462,7 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
                         syst_scanranges_.at(i).getHighest(),graphname+"_nom",name);
                 cv.Draw();
                 g->Draw("Aa3pl");
+                gline->Draw("l");//again
                 if(syst_scanranges_.at(i).isSingle())
                     gnom.Draw("Pe");
 
@@ -461,12 +472,16 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
                 cv.Clear();
                 applyGraphCosmetics(g,gc_scancombinedUP,syst_scanranges_.at(i).getLowest(),
                         syst_scanranges_.at(i).getHighest(),graphname,name,2.05);
+                applyGraphCosmetics(gline,gc_scancombinedUP,syst_scanranges_.at(i).getLowest(),
+                        syst_scanranges_.at(i).getHighest(),graphname,name,2.05);
+
                 cv.Divide(1,2);
                 TVirtualPad * pad=cv.cd(1);
                 pad->SetBottomMargin(0.015);
                 pad->SetLeftMargin(.15);
                 pad->SetTopMargin(.189);
                 g->Draw("Aa3pl");
+                gline->Draw("l");//again
                 if(syst_scanranges_.at(i).isSingle())
                     gnom.Draw("Pe");
 
