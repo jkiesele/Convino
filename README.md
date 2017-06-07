@@ -4,4 +4,4 @@ The Convino program allows combining sets of differential or inclusive measureme
 For a complete description of the method and the program, see [1].
 
 
-[1] J. Kieseler, "AA method and tool for combining differential or inclusive measurements obtained with simultaneously constrained uncertainties", https://arxiv.org/abs/1706.01681
+[1] J. Kieseler, "A method and tool for combining differential or inclusive measurements obtained with simultaneously constrained uncertainties", https://arxiv.org/abs/1706.01681
