@@ -3,5 +3,8 @@ The Convino program allows combining sets of differential or inclusive measureme
 
 For a complete description of the method and the program, see [1].
 
+The source code can be compiled with gcc, supporting C++11 standard. It depends on ROOT6 [https://root.cern.ch/]. 
+For compiling and running on cern lxplus, please source the lxplus_env.sh script.
+
 
 [1] J. Kieseler, "A method and tool for combining differential or inclusive measurements obtained with simultaneously constrained uncertainties", https://arxiv.org/abs/1706.01681
