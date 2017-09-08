@@ -214,9 +214,11 @@ void combiner::readConfigFile(const std::string & filename){
     }
     //fill nominal assumptions
     for(size_t i=0;i<syst_scanranges_.size();i++){
-        for(size_t j=0;j<syst_scanranges_.at(i).size();j++)
-            external_correlations_.setEntry(syst_scanranges_.at(i).get(j).idxa,syst_scanranges_.at(i).get(j).idxb,
+        for(size_t j=0;j<syst_scanranges_.at(i).size();j++){
+            setSystCorrelation(syst_scanranges_.at(i).get(j).idxa,syst_scanranges_.at(i).get(j).idxb,
                     syst_scanranges_.at(i).get(j).nominal);
+
+        }
     }
 
 }
