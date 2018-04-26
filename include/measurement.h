@@ -15,6 +15,7 @@
 #include "TString.h"
 #include "TH1D.h"
 #include "namedMatrix.h"
+#include "uncertainty.h"
 
 class measurement{
 public:
@@ -91,6 +92,15 @@ public:
 	 * (nominal + uncertainty)
 	 */
 	void addSystematics(const TString& name, std::vector<double> variedmeas);
+
+    /**
+     * Adds an asymmetric systematic uncertainty which is uncorrelated
+     * to all others. Correlations between the uncertainties
+     * can be defined only by using the setHessian() method
+     * The vector of values must contain only the variation
+     * (0*nominal + uncertainty)
+     */
+    void addSystematics(const TString& name, std::vector<uncertainty> variedmeas);
 
 	/**
 	 * Defines the correlation between the estimates i and j.
@@ -179,14 +189,15 @@ private:
 	/*
 	 * Matrices to descrbe initial pseudo-likelihood
 	 */
-	std::vector<std::vector<double> > LM_, Lk_, LD_;
+	std::vector<std::vector<double> > LM_, LD_;
+	std::vector<std::vector<uncertainty> > Lk_;
 
 
 	std::vector<parameter> lambdas_;
 	std::vector<parameter> x_;
 
 
-	namedMatrix c_external_;
+	namedMatrix<uncertainty> c_external_;
 
 	/*
 	 * Temps for root/c++ interface

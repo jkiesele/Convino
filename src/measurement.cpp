@@ -12,6 +12,7 @@
 #include "helpers.h"
 #include "fileReader.h"
 #include <iostream>
+#include <math.h>
 #ifdef USE_MP
 #include <omp.h>
 #endif
@@ -109,7 +110,7 @@ void measurement::readFromFile(const std::string& infile){
 		fr.readFile(infile);
 		//read the input
 		std::vector<TString> estnames, sysnames, allnames;
-		std::vector<std::vector<double> > unc;
+		std::vector<std::vector<uncertainty> > unc;
 		std::vector<double> stat(fr.nLines()-1);
 		bool hasstat=false;
 
@@ -132,23 +133,27 @@ void measurement::readFromFile(const std::string& infile){
 			if(fr.nEntries(l) != expectentries )
 				throw std::runtime_error("measurement::readFromFile: wrong format in \"not fitted\"");
 
-			std::vector<double> vunc;
+			std::vector<uncertainty> vunc;
 			for(size_t e=0;e<fr.nEntries(l);e++){
 				if(!e){
 					estnames.push_back(fr.getData<TString>(l,e));
 				}
 				else{
-					if(!hasstat || e<fr.nEntries(l)-1)
-						vunc.push_back(fr.getData<double>(l,e));
-					else
-						stat.at(l-1)=fr.getData<double>(l,e);
+
+					if(!hasstat || e<fr.nEntries(l)-1){
+	                    uncertainty thisunc;
+	                    thisunc.readFromString(fr.getData<std::string>(l,e));
+						vunc.push_back(thisunc);
+					}
+					else{
+						stat.at(l-1)=fr.getData<double>(l,e);}
 				}
 			}
 			unc.push_back(vunc);
 		}
 
 
-		c_external_ = namedMatrix(estnames,sysnames);
+		c_external_ = namedMatrix<uncertainty>(estnames,sysnames);
 		for(size_t i=0;i<c_external_.nRows();i++){
 			for(size_t j=0;j<c_external_.nCols();j++){
 				c_external_.setEntry(i,j,unc.at(i).at(j));
@@ -268,6 +273,7 @@ void measurement::readFromFile(const std::string& infile){
 }
 
 
+
 ////////// C++ interface //////////
 
 void measurement::setMeasured(const TH1D* h){
@@ -307,7 +313,7 @@ void measurement::setMeasured(const std::vector<double>& meas, const std::vector
 	}
 	est_corr_=correlationMatrix(estnames);
 
-	c_external_=namedMatrix(estnames,std::vector<TString>());
+	c_external_=namedMatrix<uncertainty>(estnames,std::vector<TString>());
 }
 
 void measurement::addSystematics(const TString& name, const TH1D* h){
@@ -326,16 +332,21 @@ void measurement::addSystematics(const TString& name, const TH1D* h){
 	}
 	addSystematics(name,variedmeas);
 }
-
 void measurement::addSystematics(const TString& name, std::vector<double> variedmeas){
+    std::vector<uncertainty>  uncs(variedmeas.size());
+    size_t i=0;
+    for(const auto& p:paras_){
+        if(p.getType()==parameter::para_estimate){
+            variedmeas.at(i)-=p.getNominalVal();
+            uncs.at(i)=uncertainty(variedmeas.at(i),-variedmeas.at(i));
+            i++;
+        }
+    }
+    addSystematics(name,uncs);
+}
+void measurement::addSystematics(const TString& name, std::vector<uncertainty> variedmeas){
 
-	size_t i=0;
-	for(const auto& p:paras_){
-		if(p.getType()==parameter::para_estimate){
-			variedmeas.at(i)-=p.getNominalVal();
-			i++;
-		}
-	}
+
 	parameter newp;
 	newp.setType(parameter::para_unc_absolute);
 	newp.setName(name);
@@ -549,7 +560,7 @@ void measurement::setup(){
 
 	//new approach. find paras in Hessian
 	LM_.resize(nest,std::vector<double>(nest,0));
-	Lk_.resize(nest,std::vector<double>(nlamb,0));
+	Lk_.resize(nest,std::vector<uncertainty>(nlamb));
 	LD_.resize(nlamb,std::vector<double>(nlamb,0));
 
 
@@ -603,7 +614,7 @@ void measurement::setup(){
 		TVectorT< double> vec(thiskappas.size(), &thiskappas.at(0));
 		TVectorT< double> ki= TM * vec;
 		for(size_t mu=0;mu<M_.size();mu++){
-			Lk_.at(mu).at(i)=-ki[mu];
+			Lk_.at(mu).at(i)=uncertainty(-ki[mu],ki[mu]);
 		}
 	}
 
@@ -625,13 +636,14 @@ void measurement::setup(){
 		std::cout << "measurement::setup: create LD" <<std::endl; //DEBUG
 
 	//fill only the first rows and cos of LD_. rest remains 0
+	//all Lk_ here are symmetric by construction
 	for(size_t i=0;i<tildeC_.size();i++){
 		for(size_t j=0;j<tildeC_.size();j++){
 			long double estsum_ij=0;
 			for(size_t mu=0;mu<x_.size();mu++){
 				for(size_t nu=0;nu<x_.size();nu++){
 					estsum_ij +=  (long double)((long double)M_.at(mu).at(nu)/2.) * //+kr_delta(mu,nu))) *
-							(long double)(Lk_.at(mu).at(i)*Lk_.at(nu).at(j) + Lk_.at(nu).at(i)*Lk_.at(mu).at(j));
+							(long double)(Lk_.at(mu).at(i).symm()*Lk_.at(nu).at(j).symm() + Lk_.at(nu).at(i).symm()*Lk_.at(mu).at(j).symm());
 
 				}
 			}
@@ -720,12 +732,12 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 		for(size_t i=0;i<nlamb;i++){
 			if(! lambdas_.at(i).isRelative()) continue;
 			double lambda_i = pars[lambdas_.at(i).getAsso()];
-			x_comb_mu *= (1 + lambda_i*Lk_.at(mu).at(i)/x_meas_mu);
+			x_comb_mu *= (1 - Lk_.at(mu).at(i).eval(lambda_i)/x_meas_mu);
 		}
 		for(size_t i=0;i<nlamb;i++){
 			if(lambdas_.at(i).isRelative()) continue;
 			double lambda_i = pars[lambdas_.at(i).getAsso()];
-			x_comb_mu += lambda_i*Lk_.at(mu).at(i);
+			x_comb_mu -= Lk_.at(mu).at(i).eval(lambda_i);
 		}
 
 		for(size_t nu=mu;nu<nx;nu++){
@@ -737,12 +749,12 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 			for(size_t i=0;i<nlamb;i++){
 				if(! lambdas_.at(i).isRelative()) continue;
 				double lambda_i = pars[lambdas_.at(i).getAsso()];
-				x_comb_nu *= (1 + lambda_i*Lk_.at(nu).at(i)/x_meas_nu);
+				x_comb_nu *= (1 - Lk_.at(nu).at(i).eval(lambda_i)/x_meas_nu);
 			}
 			for(size_t i=0;i<nlamb;i++){
 				if(lambdas_.at(i).isRelative()) continue;
 				double lambda_i = pars[lambdas_.at(i).getAsso()];
-				x_comb_nu += lambda_i*Lk_.at(nu).at(i);
+				x_comb_nu -= Lk_.at(nu).at(i).eval(lambda_i);
 			}
 
 			double contribution = (x_meas_mu - x_comb_mu) * LM_.at(mu).at(nu) * (x_meas_nu - x_comb_nu);

@@ -32,11 +32,18 @@ It is not strictly necessary, but adviced that estimates affected by uncertainti
   # In addition to fitted uncertainties described by the hessian,
   # also additional uncertainties, orthogonal to all others,
   # can be added here. The "stat" entry will be ignored
+  #
+  # In this block, asymmetric uncertainties can be added, too
+  # the syntax is: 
+  # (+X-Y), where X is the upward variation and Y the downward variation.
+  # (-X+Y) or (+X+Y) or (-X-Y) are also possible and the sign information
+  # is propagated accordingly
+  #
   # An example is provided below
   #
                   sys_d3  sys_e3         stat   
-  estimate_a3     5       6.1            6    
-  estimate_b3     3       1              2
+  estimate_a3     (+5-3)  6.1            6    
+  estimate_b3     (-3+4)  1              2
 
 [end not fitted]
 
