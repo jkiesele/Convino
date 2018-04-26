@@ -7,7 +7,7 @@
 
 
 #include "../include/uncertainty.h"
-
+#include "TString.h"
 
 
 void uncertainty::readFromString(std::string s){
@@ -32,7 +32,9 @@ void uncertainty::readFromString(std::string s){
     if(s.length()<6)
         throw std::runtime_error("uncertainty::readFromString: string format wrong: "+s);
 
-    s.erase (std::remove (s.begin(), s.end(), ' '), s.end());
+    TString tst=s;
+    tst.ReplaceAll(" ","");
+    s=tst.Data();
     //remove parentheses
     s=s.substr(1,s.length()-2);
 
