@@ -156,9 +156,9 @@ void combiner::readConfigFile(const std::string & filename){
         if(fr.nEntries(i)<2)continue;
         correlationscan cscans;
         TString sysname=fr.getData<TString>(i,0);
-        size_t idx=0;
+        size_t idxa=0;
         try{
-            idx=external_correlations_.getEntryIndex(sysname);
+            idxa=external_correlations_.getEntryIndex(sysname);
         }catch(...){
             throw std::runtime_error(("combiner::setup: reading in correlation assumptions: failed to find systematic "+sysname).Data());
         }
@@ -170,22 +170,25 @@ void combiner::readConfigFile(const std::string & filename){
         std::string sysnames=",";
         for(size_t j=0;j<contributions.size();j++){
             single_correlationscan cscan;
-            cscan.idxa=idx;
+            cscan.idxa=idxa;
             cscan.nominal=0;
             cscan.high=0;
             cscan.low=0;
+            cscan.namea=sysname;
 
+            size_t idxb=0;
 
             tf.setDelimiter(")");
             tf.setTrim(" (");
             std::vector<std::string> entry=tf.getFormatted(contributions.at(j));
             if(entry.size() < 1)continue;
             try{
-                idx=external_correlations_.getEntryIndex(entry.at(1).data());
+                idxb=external_correlations_.getEntryIndex(entry.at(1).data());
             }catch(...){
                 throw std::runtime_error(("combiner::setup: reading in correlation assumptions: failed to find systematic "+(TString)entry.at(1)).Data());
             }
-            cscan.idxb=idx;
+            cscan.idxb=idxb;
+            cscan.nameb=entry.at(1).data();
             tf.setDelimiter("&");
             tf.setTrim(" ");
             std::vector<std::string> nominalandrange=tf.getFormatted(entry.at(0));

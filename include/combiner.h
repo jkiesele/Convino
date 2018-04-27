@@ -123,6 +123,7 @@ private:
         float nominal;
         float low;
         float high;
+        TString namea, nameb;
 
     };
     //very simple
