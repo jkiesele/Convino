@@ -38,13 +38,9 @@ void uncertainty::readFromString(std::string s){
     //remove parentheses
     s=s.substr(1,s.length()-2);
 
-    double secondsign=-1;
-    char separator='-';
     size_t seppos=s.find_last_of('-');
     if(seppos==std::string::npos || seppos==0){
-        separator='+';
         seppos=s.find_last_of('+');
-        secondsign=1;
     }
     std::string firststr=s.substr(0,seppos);
     std::string secstr=s.substr(seppos,s.length());
