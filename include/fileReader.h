@@ -21,13 +21,15 @@
 
 class fileReader : public textFormatter{
 public:
-	fileReader(): textFormatter(), /*trim_(" \t"),comment_("#"),delimiter_(",") ,*/start_(""),end_(""),blindmode_(false),requirevalues_(true){}
+	fileReader(): textFormatter(), start_(""),end_(""),blindmode_(false),requirevalues_(true){}
 	~fileReader(){clear();}
-	/*
-    void setTrim(const std::string& tr){trim_=tr;}
-    void setComment(const std::string& c){comment_=c;}
-    void setDelimiter(const std::string& d){delimiter_=d;}
-	 */
+	fileReader(const fileReader&rhs){
+	    copyFrom(rhs);
+	}
+	fileReader & operator =(const fileReader& rhs){
+	    copyFrom(rhs);
+	    return *this;
+	}
 
 	/**
 	 * ignores any white spaces!!
@@ -49,6 +51,8 @@ public:
 	 */
 
 	void readFile(const std::string& filename);
+
+	void addFromFile(const std::string& filename);
 
 
 	// "[" are added automatically
@@ -126,12 +130,15 @@ public:
 
 private:
 
+	void copyFrom(const fileReader& rhs);
+
 	enum read_return {read_success,read_nomarker,read_failed};
 
 	read_return readFilePriv(const std::string& filename);
 
 	std::string start_,end_;
 	std::vector<std::vector<std::string> > lines_;
+	std::vector<std::string> externals_;
 	bool blindmode_;
 	bool requirevalues_;
 	std::string tempinfilename_;

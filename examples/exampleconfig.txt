@@ -50,4 +50,16 @@ The other blocks are commented individually
 	sys_a1 = (0.2 & -0.9 : 0.9) sys_c2 + (0.2 & 0.4 : -0.4) sys_c1 
 	
 	
+	
+	# correlations can also be added from a different file
+	# please not that this line has to start with #!FILE
+	# the file needs to be in the same directory as this config file
+	#!FILE  =  extra_correlations.txt
+	
+	
+	
+	
+	
+	
+	
 [end correlations]

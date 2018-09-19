@@ -18,6 +18,21 @@
 
 bool fileReader::debug=false;
 
+void fileReader::copyFrom(const fileReader& rhs){
+    trim_=rhs.trim_;
+    comment_=rhs.comment_;
+    delimiter_=rhs.delimiter_;
+
+    start_        =rhs.start_;
+    end_          =rhs.end_;
+    lines_         =rhs.lines_;
+    externals_      =rhs.externals_;
+    blindmode_      =rhs.blindmode_;
+    requirevalues_  =rhs.requirevalues_;
+    tempinfilename_ =rhs.tempinfilename_;
+}
+
+
 
 /**
  * ignores any white spaces!!
@@ -40,6 +55,8 @@ fileReader::read_return fileReader::readFilePriv(const std::string& filename){
 	using namespace std;
 	lines_.clear();
 	ifstream myfile (filename.data(), ios::in);
+	std::string filedir=textFormatter::getFileDir(filename);
+	filedir+="/";
 	if (myfile.is_open())
 	{
 		tempinfilename_=filename;
@@ -68,6 +85,20 @@ fileReader::read_return fileReader::readFilePriv(const std::string& filename){
 				continue;
 			}
 			else{
+			    std::string externalmarker="#!FILE";
+			    if(s.size()>6 && s.find(externalmarker) != std::string::npos){
+			        textFormatter tf;
+			        tf.setDelimiter("=");
+			        tf.setComment("");
+			        std::vector<std::string> formatted=tf.getFormatted<std::string>(s);
+			        if(formatted.size()>0){
+			            externals_.push_back(filedir+formatted.at(1));
+			            continue;
+			        }
+			        else
+			            throw std::runtime_error("fileReader::readFilePriv: external input file format wrong");
+
+			    }
 				trimcomments(s);
 				trim(s);
 			}
@@ -132,6 +163,9 @@ fileReader::read_return fileReader::readFilePriv(const std::string& filename){
 	else{
 		return read_failed;
 	}
+	for(const auto& e:externals_){
+	    addFromFile(e);
+	}
 	return read_success;
 
 }
@@ -146,6 +180,23 @@ void fileReader::readFile(const std::string &filename){
 
 }
 
+void fileReader::addFromFile(const std::string& filename){
+
+    fileReader copyFR(*this);
+    copyFR.lines_.clear();
+    copyFR.externals_.clear();
+    copyFR.setStartMarker("");
+    copyFR.setEndMarker("");
+
+    try{
+        copyFR.readFile(filename);
+        lines_.insert(lines_.end(),copyFR.lines_.begin(),copyFR.lines_.end());
+    }
+    catch(std::exception& e){
+        std::cerr << "error in fileReader::addFromFile:" <<std::endl;
+        throw e;
+    }
+}
 
 bool fileReader::hasNonEmptyMarker(const std::string& filename, const std::string& startmarker, const std::string& endmarker)const{
 	fileReader frcp=*this;
