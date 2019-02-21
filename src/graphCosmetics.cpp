@@ -32,7 +32,7 @@ void applyGraphCosmetics(TGraphAsymmErrors* g, graphcosmetics c, double xlow, do
 		g->SetLineColor(kBlack);
 		g->SetLineWidth(2);
 	}
-	else if(c==gc_scancombined || c==gc_scancombinedUP || gc_multiscan){
+	else if(c==gc_scancombined || c==gc_scancombinedUP || c==gc_multiscan){
 		g->GetYaxis()->SetTitleOffset(1/scaler);
 		g->GetYaxis()->CenterTitle(true);
 	//	if(gc_scancombinedUP)
