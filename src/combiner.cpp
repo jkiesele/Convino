@@ -127,9 +127,9 @@ void combiner::readConfigFile(const std::string & filename){
         //constraints
 
     }
+
     //std::cout << "all read in" <<std::endl; //DEBUG
     fr.clear();//will be used later
-
     fr.setStartMarker("[observables]");
     fr.setEndMarker("[end observables]");
     fr.setDelimiter("=");
@@ -147,6 +147,8 @@ void combiner::readConfigFile(const std::string & filename){
     }
     ///needs to be called to set up external correlation matrix
 
+    if(debug)
+        std::cout << "correlations" << std::endl;
 
     fr.setStartMarker("[correlations]");
     fr.setEndMarker("[end correlations]");
@@ -280,7 +282,6 @@ void combiner::associatePriv(const TString & a, const TString& outname){
             break;
         }
     }
-
 
     for(auto& c: tobecombined_){
         if(c.first == outname){
@@ -537,6 +538,8 @@ combinationResult combiner::combinePriv(){
     if(debug)
         std::cout << "combiner::combine" <<std::endl;
 
+
+
     combinationResult out;
     /*
      * for differential distributions associate automatically here
@@ -552,7 +555,6 @@ combinationResult combiner::combinePriv(){
                 associate(ps.at(i).name(),"comb_"+toTString(i));
         }
     }
-
 
 
     const size_t nsys=external_correlations_.size();
@@ -689,6 +691,8 @@ combinationResult combiner::combinePriv(){
             out.post_sys_correlations_.setEntry(i,j,fitter.getCorrelationCoefficient(i,j));
         }
     }
+
+    out.post_all_correlations_ = fitter.getCorrelationMatrix();
 
     if(debug && nsyst<20)
         std::cout << "post combine systematics correlations: \n"<< out.post_sys_correlations_ << std::endl;

@@ -52,7 +52,7 @@ The other blocks are commented individually
 	
 	
 	# correlations can also be added from a different file
-	# please not that this line has to start with #!FILE
+	# please not that this line has to start with # ! FILE (without the blanks)
 	# the file needs to be in the same directory as this config file
 	#!FILE  =  extra_correlations.txt
 	

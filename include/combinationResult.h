@@ -153,6 +153,15 @@ public:
 		return post_sys_correlations_;
 	}
 
+    /**
+     * Returns a correlationMatrix object containing the
+     * correlations between the uncertainties and the combined values after the combination
+     * (full matrix)
+     */
+    const correlationMatrix& getPostAllCorrelations() const {
+        return post_all_correlations_;
+    }
+
 	/**
 	 * Reduces the stored information to combined values, combined names
 	 * and the uncertainties, only. Deletes all matrices, pulls and
@@ -165,7 +174,7 @@ protected:
 	std::vector<double> combined_, comberrup_,comberrdown_;
 	correlationMatrix orig_sys_correlations_;
 	correlationMatrix orig_meas_correlations_;
-	correlationMatrix post_sys_correlations_,post_meas_correlations_;
+	correlationMatrix post_sys_correlations_,post_meas_correlations_,post_all_correlations_;
 	std::vector<double> pulls_;
 	std::vector<double> constraints_;
 	double chi2min_;

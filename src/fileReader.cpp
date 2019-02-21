@@ -132,12 +132,10 @@ fileReader::read_return fileReader::readFilePriv(const std::string& filename){
 
 			istringstream ss( s );
 			vector <string> record;
+            string s2;
 			bool noentry=true;
-			while (ss)
+			while (getline( ss, s2, *delimiter_.data() ))
 			{
-
-				string s2;
-				if (!getline( ss, s2, *delimiter_.data() )) break;
 
 				if(debug)
 					std::cout << "read \"" << s2 << "\""<<std::endl;

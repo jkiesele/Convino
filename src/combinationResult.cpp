@@ -41,6 +41,10 @@ void combinationResult::printSimpleInfo(std::ostream& out)const{
 
 void combinationResult::printFullInfo(std::ostream& out)const{
 	printSimpleInfo(out);
+
+    out << "full correlation matrix:" <<std::endl;
+    out << post_all_correlations_ << std::endl;
+
 	out << std::endl;
 	out << textFormatter::fixLength("Name",11);
 	out << textFormatter::fixLength("pull",7);
@@ -55,8 +59,7 @@ void combinationResult::printFullInfo(std::ostream& out)const{
 		out << textFormatter::fixLength(toString(pulls_.at(i)),4) << "   ";
 		out << textFormatter::fixLength(toString(constraints_.at(i)),4) << std::endl;
 	}
-	//	out << "\nmatrix differences (up to 0.01)\n";
-	//	printDifferenceList(out,0.01);
+
 
 }
 
@@ -117,6 +120,7 @@ void combinationResult::reduce(){
 	orig_meas_correlations_.clear();
 	post_sys_correlations_.clear();
 	post_meas_correlations_.clear();
+	post_all_correlations_.clear();
 	pulls_.clear();
 	constraints_.clear();
 
