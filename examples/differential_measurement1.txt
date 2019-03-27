@@ -1,25 +1,14 @@
 
-This is an example of a measurement file.
-The description can be written in this header and will be ignored by the program.
-Comments can be made also within the blocks. Here they have to follow a "#"
-A measurement file can contain one or many estimates (or measurements) for one or many quantities.
-It is not strictly necessary, but adviced that estimates affected by uncertainties known correlations 
-(e.g. from one experiment) are summarised in one file.
 
-This file described a measurement with orthogonal uncertainties. For this purpose, a simplified input
-can be used. Instead of defining a hessian or a correlation matrix, the estimates and uncertainties can 
-be given in a few lines (see "not fitted" marker).
-
-For non-orthogonal uncertainties, see exampleMeasurement2.txt
 
 [hessian]
-  #empty in this example.
+
+m1_bin0  14.761263800896232 
+m1_bin1  -0.37968885446152578 13.004271448070741 
+m1_bin2  -12.844841352450343 -4.93973648416838 28.140609708592514 
+m1_bin3  0.39129861426567203 -2.0770394268529309 -14.275330045986173 29.943634732401268 
+
 [end hessian]
-
-
-[correlation matrix]
-  #empty in this example
-[end correlation matrix]
 
 [not fitted]
 

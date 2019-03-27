@@ -10,6 +10,8 @@
 #include "TString.h"
 #include "TFile.h"
 #include "TH2.h"
+#include "triangularMatrix.h"
+#include <sstream>
 
 void coutHelp(){
     std::cout << "program to convert a root th2x to a correlation matrix, hessian or covariance matrix to convino configuration text file format." ;
@@ -18,7 +20,8 @@ void coutHelp(){
     std::cout << "OPTIONS:\n";
     std::cout << "\n-h              display this help message\n";
 
-    std::cout << "\n-o              output format. Options: cov(ariance) (default),\n";
+    std::cout << "\n-i              input format.\n";
+    std::cout << "                  Options: cov(ariance) (default, will be converted to hessian),\n";
     std::cout << "                  hes(sian), cor(relation) matrix\n";
     std::cout << "\n-p              measurement prefix name (will be added to \"binX\")";
     std::cout << "\n--noufof        do not consider under and overflow bins";
@@ -28,7 +31,7 @@ void coutHelp(){
     std::cout << std::endl;
 }
 
-TString extractMatrix(const TString& file, const TString& histo, TString prefix, bool ignoreufof){
+TString extractMatrix(const TString& file, const TString& histo, TString prefix, bool ignoreufof, bool convertcovtohes){
 
     TFile f(file);
     auto* o=f.Get(histo);
@@ -63,21 +66,60 @@ TString extractMatrix(const TString& file, const TString& histo, TString prefix,
         minbin++;
     }
 
-    int bincounter=0;
-    for(int i=minbin;i<maxbin;i++){
-        output+=prefix+"bin";
-        output+=bincounter;
-        bincounter++;
-        output+="  ";
-        for(int j=minbin;j<=i;j++){
-            output += h->GetBinContent(i,j);
-            output+=" ";
+    if(!convertcovtohes){
+
+        int bincounter=0;
+        for(int i=minbin;i<maxbin;i++){
+            output+=prefix+"bin";
+            output+=bincounter;
+            bincounter++;
+            output+="  ";
+            for(int j=minbin;j<=i;j++){
+                output += h->GetBinContent(i,j);
+                output+=" ";
+            }
+            output+="\n";
         }
-        output+="\n";
+    }
+    else{
+        std::vector<TString> names;
+        int bincounter=0;
+        for(int i=minbin;i<maxbin;i++){
+            TString n=prefix+"bin";
+            n+=bincounter;
+            bincounter++;
+            names.push_back(n);
+        }
+        int bincounteri=0;
+        int bincounterj=0;
+        triangularMatrix m(names);
+        for(int i=minbin;i<maxbin;i++){
+            bincounterj=0;
+            for(int j=minbin;j<=i;j++){
+                m.setEntry(bincounteri,bincounterj,h->GetBinContent(i,j));
+                bincounterj++;
+            }
+            bincounteri++;
+        }
+        double det=1;
+        m.invert(det);
+        if(!det){
+            std::cout << "covariance could not be inverted. Please check for input errors or if the matrix is ill-defined." << std::endl;
+            exit(-1);
+        }
+        for(size_t i=0;i<names.size();i++){
+            output+=names.at(i)+"  ";
+            for(size_t j=0;j<=i;j++){
+                output+=m.getEntry(i,j);
+                output+=" ";
+            }
+            output+="\n";
+        }
+
     }
 
 
-return output;
+    return output;
 
 }
 
@@ -106,7 +148,7 @@ int main(int argc, char* argv[]){
                 coutHelp();
                 exit(0);
             }
-            if(targv == "-o"){
+            if(targv == "-i"){
                 if(next == "cov"){
                     outputname="covariance";
                 }
@@ -134,10 +176,16 @@ int main(int argc, char* argv[]){
         coutHelp();
         exit(-1);
     }
+
+    bool convertcovtohes=false;
+    if(outputname=="covariance")
+        convertcovtohes=true;
+    outputname="hessian";
+
     TString all ="[";
     all+=outputname;
     all+="]\n\n";
-    all += extractMatrix(opts.at(0),opts.at(1),prefix,ignoreufof);
+    all += extractMatrix(opts.at(0),opts.at(1),prefix,ignoreufof,convertcovtohes);
     all+="\n";
     all+="[end ";
     all+=outputname;

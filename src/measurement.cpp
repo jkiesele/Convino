@@ -713,9 +713,6 @@ void measurement::setup(){
             normalisation_ += p.getNominalVal();
 
     //debug
-    std::cout << normalisation_ << std::endl;
-    std::cout << "target" << normalisation_target_ << std::endl;
-
 
 	//DEBUG
 	if(debug){
