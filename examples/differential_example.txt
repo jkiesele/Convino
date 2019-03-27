@@ -1,0 +1,40 @@
+
+This is an example base file.
+The header can be used for documentation and will be ignored by the program.
+Comments within the blocks have to begin with #.
+The input block lists the measurement files. For details, please see exampleMeasurement1.txt
+The other blocks are commented individually
+
+[global]
+
+    isDifferential = true
+    normalise = true
+
+[end global]
+
+[inputs]
+
+    nFiles = 2
+
+    file0 = differential_measurement1.txt
+    file1 = differential_measurement2.txt
+    
+[end inputs]
+	
+	
+[observables]
+	
+	
+	bin0 = m1_bin0 + m2_bin0
+    bin1 = m1_bin1 + m2_bin1
+    bin2 = m1_bin2 + m2_bin2
+    bin3 = m1_bin3 + m2_bin3
+	
+[end observables]
+	
+	
+[correlations]
+	
+	sys_a1 =  (0.1 & -0.9 : 0.9) sys_b2
+		
+[end correlations]

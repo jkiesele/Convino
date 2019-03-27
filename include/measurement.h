@@ -154,6 +154,28 @@ public:
 	 */
 	void setParameterValue(const TString & name, const double& val);
 
+	/**
+	 * Defines the target normalisation.
+	 * Default is 1.
+	 */
+	void setNormalisationTarget(double norm=1){
+	    normalisation_target_=norm;
+	}
+
+	double getNormalisationScaling()const;
+
+	/**
+	 * Excludes one bin for a differential, normalised measurement. Starting from 0
+	 * TBI
+	 * Resets with bin<0
+	 */
+	void setExcludeBin(int bin);
+
+
+	void setIsDifferential(bool isdiff){
+	    isDifferential_=isdiff;
+	}
+
 
 	/////// interface to combined class. Should not be used by the user ///////
 
@@ -163,6 +185,7 @@ public:
 	const std::vector<parameter> & getParameters()const{return paras_;}
 	void setup();
 	double evaluate(const double* pars, double* df, const bool& pearson, const size_t& maxidx)const;
+	double evaluate_normalisation(const double* pars, double* df, const bool& pearson, const size_t& maxidx)const;
 	const std::vector<parameter> & getLambdas()const{return lambdas_;}//for priors
 	const std::vector<parameter> & getEstimates()const{return x_;}
 	const parameter& getParameter(const TString& name)const;
@@ -209,6 +232,8 @@ private:
 	static size_t nobjects_;
 
 	bool isDifferential_;
+    double normalisation_,normalisation_target_;
+    int excludebin_;
 };
 
 

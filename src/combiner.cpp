@@ -97,20 +97,37 @@ const double combiner::maxcorr_=0.999;
 void combiner::addMeasurement(const std::string& infile){
     if(debug)
         std::cout << "combiner::addMeasurement" <<std::endl;
-    addMeasurement(measurement(infile));
+    auto m = measurement(infile);
+    m.setIsDifferential(isdifferential_);
+    if(norm_constraint_>0)
+        m.setNormalisationTarget(1);
+    else
+        m.setNormalisationTarget(-1);
+    addMeasurement(m);
 }
 void combiner::printCorrelationMatrix()const{
     if(debug)
         std::cout << "combiner::printCorrelationMatrix" <<std::endl;
 }
 void combiner::readConfigFile(const std::string & filename){
-    isdifferential_=false;
 
 
     configfile_=filename;
     fileReader fr;
     fr.setComment("#");
     fr.setDelimiter(",");
+    fr.setStartMarker("[global]");
+    fr.setEndMarker("[end global]");
+    fr.readFile(configfile_);
+    fr.setRequireValues(false);
+    isdifferential_ = fr.getValue<bool>("isDifferential",false);
+    float normconstr=0;
+    if(fr.getValue<bool>("normalise",false))
+        normconstr=100;
+    norm_constraint_ = fr.getValue<float>("normConstraint",normconstr);
+
+std::cout << norm_constraint_ << std::endl; //debug
+    fr.setRequireValues(true);
     fr.setStartMarker("[inputs]");
     fr.setEndMarker("[end inputs]");
     fr.readFile(configfile_);
@@ -571,7 +588,11 @@ combinationResult combiner::combinePriv(){
                     thisval=m.getParameter(tobecombined_.at(i).second.at(j)).getNominalVal();
                     m.associateEstimate(tobecombined_.at(i).second.at(j),i+nsys);
                 }catch(...){}
-                if(thisval)mean+=thisval;
+                if(thisval){
+                    thisval /= m.getNormalisationScaling();
+                    mean+=thisval;
+
+                }
             }
         }
         mean/=(double)(tobecombined_.at(i).second.size());

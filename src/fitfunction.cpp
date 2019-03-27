@@ -36,6 +36,13 @@ void fitfunctionBase::eval(const double*x, double& f, double* df)const{
 		double f_local=meass.at(i).evaluate(x,df,c->lh_mod_==combiner::lh_mod_pearson,nDim());
 		f+=f_local;
 	}
+	//forced normalisation, same constraint from every measurement, one is enough
+	if(meass.size()<1)
+	    throw std::out_of_range("fitfunctionBase::eval: No measurements associated");
+	if(c->norm_constraint_){
+	    double norm_constraint = meass.at(0).evaluate_normalisation(x,df,c->lh_mod_==combiner::lh_mod_pearson,nDim());
+	    f += norm_constraint*c->norm_constraint_;
+	}
 
 	const size_t nsys=c->npars_-c->nest_;
 
@@ -51,7 +58,7 @@ void fitfunctionBase::eval(const double*x, double& f, double* df)const{
 
 		if(c->allsysparas_.at(i).getType() == parameter::para_unc_lognormal){
 			if(x[i]>-1)
-				pi = std::log(1 + x[i]);
+				pi = std::log(1 + x[i]); //this needs some re-work and transofrmation before, TBI
 			else
 				pi = 1e4*x[i];
 		}

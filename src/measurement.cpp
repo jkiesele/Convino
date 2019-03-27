@@ -20,7 +20,9 @@
 bool measurement::debug=false;
 size_t measurement::nobjects_=0;
 
-measurement::measurement():setup_(false),hasUF_(false), hasOF_(false),isDifferential_(false) {
+measurement::measurement():setup_(false),hasUF_(false), hasOF_(false),isDifferential_(false),
+        normalisation_(-1),
+        normalisation_target_(-1){
 	nobjects_++;
 }
 
@@ -421,6 +423,18 @@ void measurement::setParameterValue(const TString & name, const double& val){
 	}
 }
 
+double measurement::getNormalisationScaling()const{
+    double xcomb_global_scaling = 1;
+    if(normalisation_target_>0)
+        xcomb_global_scaling =   normalisation_ / normalisation_target_;
+    return xcomb_global_scaling;
+}
+
+void measurement::setExcludeBin(int bin){
+    if(bin>=x_.size())
+        throw std::out_of_range("measurement::setExcludeBin: out of range");
+    excludebin_=bin;
+}
 ////////// Interface to combiner ////////
 
 void measurement::associateEstimate(const size_t & est_idx, const size_t & comb_idx){
@@ -510,6 +524,8 @@ void measurement::setup(){
 			}
 		}
 	}
+
+
 	M_.resize(nHest,std::vector<double>(nHest,0));
 	kappa_.resize(nHest,std::vector<double>(nHlamb,0));
 	tildeC_.resize(nHlamb,std::vector<double>(nHlamb,0));
@@ -690,19 +706,43 @@ void measurement::setup(){
 	hinv.invert();
 
 
+    //calculate integral (only used for differential)
+    normalisation_ = 0;
+    for(const auto& p: x_)
+        if(p.getType() == parameter::para_estimate)
+            normalisation_ += p.getNominalVal();
+
+    //debug
+    std::cout << normalisation_ << std::endl;
+    std::cout << "target" << normalisation_target_ << std::endl;
+
+
 	//DEBUG
 	if(debug){
 		std::cout << "H:\n" << H_<<std::endl;
 		std::cout << "M: " << M_<<std::endl;
 		std::cout << "kappa: " << kappa_<<std::endl;
 		std::cout << "C_tilde: " << tildeC_<<'\n'<<std::endl;
-
+		std::cout << normalisation_ << std::endl;
 
 		std::cout << "k_tilde: " << Lk_<<std::endl;
 		std::cout << "D: " << LD_<<std::endl;
 	}
 
 	setup_=true;
+}
+
+double measurement::evaluate_normalisation(const double* pars, double* df, const bool& pearson, const size_t& maxidx)const{
+
+    const size_t nx=x_.size();
+
+    double x_comb_integral=0;
+    for(size_t mu=0;mu<nx;mu++){
+        x_comb_integral += pars[x_.at(mu).getAsso()];
+    }
+
+    return (x_comb_integral-normalisation_target_)*(x_comb_integral-normalisation_target_);
+
 }
 
 double measurement::evaluate(const double* pars, double* df, const bool& pearson, const size_t& maxidx)const{
@@ -713,7 +753,7 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 	const size_t nlamb=lambdas_.size();
 	const size_t nx=x_.size();
 
-
+    double xcomb_global_scaling = getNormalisationScaling();
 
 	//std::cout << "eval" <<std::endl;
 
@@ -724,9 +764,11 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 
 	double xsqpart=0;
 	//x^2 part - symmetric
+
+
 	for(size_t mu=0;mu<nx;mu++){
 
-		double x_comb_mu = pars[x_.at(mu).getAsso()];
+		double x_comb_mu = pars[x_.at(mu).getAsso()] * xcomb_global_scaling;
 		double x_meas_mu = x_.at(mu).getNominalVal();
 
 		for(size_t i=0;i<nlamb;i++){
@@ -742,7 +784,7 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 
 		for(size_t nu=mu;nu<nx;nu++){
 
-			double x_comb_nu = pars[x_.at(nu).getAsso()];
+			double x_comb_nu = pars[x_.at(nu).getAsso()] * xcomb_global_scaling;
 			double x_meas_nu = x_.at(nu).getNominalVal();
 
 
@@ -806,6 +848,7 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 			throw std::runtime_error("measurement::evaluate: nan in lambda^2 part");
 	}
 	double out=xsqpart + copart;
+
 	return out;
 }
 
@@ -828,6 +871,8 @@ void measurement::copyFrom(const measurement& r){
 	hasUF_=r.hasUF_;
 	hasOF_=r.hasOF_;
 	isDifferential_=r.isDifferential_;
+	normalisation_ = r.normalisation_;
+	normalisation_target_ = r.normalisation_target_;
 }
 
 const parameter& measurement::getParameter(const TString& name)const{

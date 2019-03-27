@@ -1,0 +1,77 @@
+
+This is an example of a measurement file.
+The description can be written in this header and will be ignored by the program.
+Comments can be made also within the blocks. Here they have to follow a "#"
+A measurement file can contain one or many estimates (or measurements) for one or many quantities.
+It is not strictly necessary, but adviced that estimates affected by uncertainties known correlations 
+(e.g. from one experiment) are summarised in one file.
+
+This file described a measurement with orthogonal uncertainties. For this purpose, a simplified input
+can be used. Instead of defining a hessian or a correlation matrix, the estimates and uncertainties can 
+be given in a few lines (see "not fitted" marker).
+
+For non-orthogonal uncertainties, see exampleMeasurement2.txt
+
+[hessian]
+  #empty in this example.
+[end hessian]
+
+
+[correlation matrix]
+  #empty in this example
+[end correlation matrix]
+
+[not fitted]
+
+  # This block can be used to describe fully orthogonal uncertainties.
+  # A measurement can be affected by these uncertainties, only, or these
+  # uncertainties have been externalised from a measurement using a simultaneous
+  # likelihood fit.
+  # 
+  # Entries in this block are separated by white spaces. The entries are as follows
+  #                <uncertainty name 1> <uncertainty name 2> <uncertainty name 3> ... stat
+  # <estimate 1>   <contributions in absolute values>   ...                           
+  # <estimate 2>   <contributions in absolute values>   ...   
+  #                
+  # The keyword "stat" is reserved for the statistical uncertainty.
+  # In case, this block is used to define additional externalised uncertainties (hessian,  
+  # or correlation matrix provided), the latter entry will be IGNORED. 
+  #
+  # The following is an example of a measurement with orthogonal uncertainties:
+
+                  sys_a1  sys_b1  sys_c1    stat   
+  m1_bin0         0.5       0.6       0.2         3    
+  m1_bin1         0.3       0.10      0.4         6
+  m1_bin2         0.2       0.4       0.2         2
+  m1_bin3         0.1       0.2       0.1         1
+
+[end not fitted]
+
+	
+[systematics]
+	
+  # In this block, the types of the uncertainties are defined: absolute (default) or relative
+	
+	
+[end systematics]
+	
+	
+[estimates]
+	
+  # The central value of each estimates is defined here
+	
+  n_estimates = 4
+  
+  name_0 = m1_bin0 
+  value_0  =  30
+  
+  name_1 = m1_bin1 
+  value_1  =  60
+  
+  name_2 = m1_bin2 
+  value_2  =  20
+  
+  name_3 = m1_bin3 
+  value_3  =  10
+	
+[end estimates]
