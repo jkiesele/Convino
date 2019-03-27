@@ -149,7 +149,7 @@ int main(int argc, char* argv[]){
 
 
     out="[not fitted]\n";
-    for(size_t i=0;i<prefix.Length()+8;i++)
+    for(size_t i=0;i<(size_t)prefix.Length()+8;i++)
         out+=" ";
 
     for(size_t i=0;i<systs.size();i++){

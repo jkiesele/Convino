@@ -431,7 +431,7 @@ double measurement::getNormalisationScaling()const{
 }
 
 void measurement::setExcludeBin(int bin){
-    if(bin>=x_.size())
+    if(bin>=(int)x_.size())
         throw std::out_of_range("measurement::setExcludeBin: out of range");
     excludebin_=bin;
 }
