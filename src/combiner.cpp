@@ -849,7 +849,7 @@ void combiner::setSystCorrelation(const size_t & idxa, const size_t& idxb, const
 }
 
 void combiner::setExcludeBin(int bin){
-    if(bin>=0 && measurements_.size() && bin >= measurements_.at(0).getEstimates().size())
+    if((size_t)bin>=0 && measurements_.size() && (size_t)bin >= measurements_.at(0).getEstimates().size())
         throw std::out_of_range("combiner::setExcludeBin: bin out of range of input bins");
 
     excludebin_=bin;
