@@ -11,7 +11,7 @@
 #include "textFormatter.h"
 #include "helpers.h"
 
-combinationResult::combinationResult():chi2min_(0),isdifferential_(false),hasUF_(false),hasOF_(false){}
+combinationResult::combinationResult():chi2min_(0),isdifferential_(false),hasUF_(false),hasOF_(false),excludebin_(-1){}
 
 void combinationResult::printResultOnly(std::ostream& out)const{
 	out << "combined (minimum chi^2="<<chi2min_<<"):"<<std::endl;
@@ -78,11 +78,20 @@ void combinationResult::fillTH1(TH1*h)const{
 		throw std::out_of_range("combinationResult::fillTH1: bins don't match");
 
 
+	auto err = getCombSymmErr();
 	for(size_t i=0;i<combined_.size();i++){
-		double maxerr=std::max(fabs(comberrup_.at(i)) ,fabs(comberrdown_.at(i)));
 		h->SetBinContent(i+start, combined_.at(i));
-		h->SetBinError(i+start,maxerr);
+		h->SetBinError(i+start,err.at(i));
 	}
+}
+
+std::vector<double> combinationResult::getCombSymmErr() const {
+    std::vector<double> out;
+    for(size_t i=0;i<combined_.size();i++){
+        double maxerr=std::max(fabs(comberrup_.at(i)) ,fabs(comberrdown_.at(i)));
+        out.push_back(maxerr);
+    }
+    return out;
 }
 
 void combinationResult::fillTGraphAsymmErrors(TGraphAsymmErrors* h, bool cutUFOF)const{

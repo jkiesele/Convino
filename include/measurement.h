@@ -171,6 +171,11 @@ public:
 	 */
 	void setExcludeBin(int bin);
 
+	/**
+	 * Uses stat only for estimation!
+	 */
+	int getLeastSignificantBin()const;
+
 
 	void setIsDifferential(bool isdiff){
 	    isDifferential_=isdiff;

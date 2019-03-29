@@ -435,6 +435,28 @@ void measurement::setExcludeBin(int bin){
         throw std::out_of_range("measurement::setExcludeBin: out of range");
     excludebin_=bin;
 }
+
+
+int measurement::getLeastSignificantBin()const{
+    if(!isDifferential_)return -1;
+    auto est = getEstimates();
+    int lowestsign=-1;
+    double temp=0;
+    for(size_t i=0;i<est.size();i++){
+        double nom = est.at(i).getNominalVal();
+        double stat = 1/LM_.at(i).at(i);
+        if(temp< stat/nom){
+            temp=stat/nom;
+            lowestsign=i;
+        }
+    }
+    if(debug)
+        std::cout << "measurement::getLeastSignificantBin: returned " << lowestsign <<std::endl;
+    return lowestsign;
+
+}
+
+
 ////////// Interface to combiner ////////
 
 void measurement::associateEstimate(const size_t & est_idx, const size_t & comb_idx){
@@ -765,6 +787,8 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 
 	for(size_t mu=0;mu<nx;mu++){
 
+	    if(excludebin_>=0 && (size_t)excludebin_ == mu)continue;
+
 		double x_comb_mu = pars[x_.at(mu).getAsso()] * xcomb_global_scaling;
 		double x_meas_mu = x_.at(mu).getNominalVal();
 
@@ -780,6 +804,8 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 		}
 
 		for(size_t nu=mu;nu<nx;nu++){
+
+	        if(excludebin_>=0 && (size_t)excludebin_ == nu)continue;
 
 			double x_comb_nu = pars[x_.at(nu).getAsso()] * xcomb_global_scaling;
 			double x_meas_nu = x_.at(nu).getNominalVal();
@@ -870,6 +896,7 @@ void measurement::copyFrom(const measurement& r){
 	isDifferential_=r.isDifferential_;
 	normalisation_ = r.normalisation_;
 	normalisation_target_ = r.normalisation_target_;
+	excludebin_ = r.excludebin_;
 }
 
 const parameter& measurement::getParameter(const TString& name)const{

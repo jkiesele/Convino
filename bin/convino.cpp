@@ -21,11 +21,14 @@ void coutHelp(){
 	std::cout << "                parameters\n";
 	std::cout << "                (slower, can help in case of convergence problems)\n"; */
 	std::cout << "\n-d              switch on debug mode (more printout)\n";
+    std::cout << "\n-e              enables scan of different exclude bins for\n";
+    std::cout << "                normalised differential inputs\n";
 	std::cout << "\n-s              enable scan of correlation assumptions\n";
 	std::cout << "\n-p              create plots for the correlation scans in .pdf format\n";
 	std::cout << "                (a directory will be created)\n";
-	std::cout << "\n--neyman        use neyman chi2 (faster)\n";
 	std::cout << "\n--prefix <pref> define a prefix for the output files/directories\n";
+    std::cout << "\n--excludebin <bin> force specific exclude bin\n";
+    std::cout << "\n--neyman        use neyman chi2 (faster)\n";
 	std::cout << std::endl;
 	std::cout << "EXAMPLE: convino -sp examples/exampleconfig.txt" <<std::endl;
 	std::cout << std::endl;
@@ -42,6 +45,8 @@ int main(int argc, char* argv[]){
 		return -1;
 	std::string infile;
 	bool doscan=false;
+	bool doexcludebinscan=false;
+	int excludebin=-1;
 	//very simple parsing
 	for(int i=1;i<argc;i++){
 		TString targv=argv[i];
@@ -56,6 +61,13 @@ int main(int argc, char* argv[]){
 				outputprefix=argv[++i];
 				comb.setOutputPrefix(outputprefix);
 			}
+			if(targv == ("--excludebin")){
+                if(i+1>=argc || ((TString)argv[i+1]).BeginsWith("-")){
+                    std::cerr << "please specify a valid prefix, e.g. --prefix <prefix>" <<std::endl;
+                    exit(-1);
+                }
+                excludebin = atoi(argv[++i]);
+            }
 			if(targv == ("--help")){
 				coutHelp();
 				exit(0);
@@ -70,6 +82,8 @@ int main(int argc, char* argv[]){
 				doscan=true;
 			if(targv.Contains("p"))
 				writeScanPlotPdfs=true;
+			if(targv.Contains("e"))
+			    doexcludebinscan=true;
 			if(targv.Contains("h")){
 				coutHelp();
 				exit(0);
@@ -93,6 +107,21 @@ int main(int argc, char* argv[]){
 	//comb.setup();
 
 	std::cout << "setup done, processing..."<<std::endl;
+
+
+    if(comb.isNormalisedDifferentialInput()){
+        std::cout << "Input is normalised differential. ";
+        if(excludebin<0){
+            std::cout << "No exclude bin given, calculating least significant bin based on first measurement input and statistical uncertainties.";
+            std::cout << std::endl;
+            comb.setExcludeBinAuto();
+            std::cout << "found exclude bin " << comb.getExcludeBin() <<std::endl;
+        }
+        else{
+            comb.setExcludeBin(excludebin);
+        }
+    }
+
 	combinationResult result=comb.combine();
 
 	result.printResultOnly(std::cout);
@@ -111,6 +140,16 @@ int main(int argc, char* argv[]){
 		else
 			comb.scanCorrelations(logfilescan,result);
 		logfilescan.close();
+	}
+	if(doexcludebinscan){
+	    if(!comb.isNormalisedDifferentialInput()){
+	        std::cout << "exclude bin scan does not make sense if input is not normalised differential. skipping" <<std::endl;
+	    }
+	    else{
+	        std::ofstream logfilescan((outputprefix+"excludebin_scan_result.txt").data());
+	        comb.scanExcludeBins(logfilescan,result);
+	        logfilescan.close();
+	    }
 	}
 
 	return 0;

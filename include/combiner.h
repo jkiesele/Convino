@@ -34,7 +34,10 @@ class fitfunctionBase;
 class combiner{
     friend class fitfunctionBase;
 public:
-    combiner():lh_mod_(lh_mod_neyman),npars_(0),nest_(0),norm_constraint_(0),lowestchi2_(1e19),isdifferential_(false),hasUF_(false),hasOF_(false){}
+    combiner():lh_mod_(lh_mod_neyman),npars_(0),nest_(0),norm_constraint_(0),
+    lowestchi2_(1e19),isdifferential_(false),hasUF_(false),hasOF_(false),
+    normalised_input_(false),
+    excludebin_(-1){}
     ~combiner(){clear();}
     enum lh_mod{lh_mod_neyman,lh_mod_pearson};
 
@@ -77,6 +80,14 @@ public:
      */
     void setSystCorrelation(const size_t & idxa, const size_t& idxb, const double& coeff);
 
+    void setExcludeBin(int bin);
+
+    int getExcludeBin()const{
+        return excludebin_;
+    }
+
+    void setExcludeBinAuto();
+
     /**
      * Starts the combination procedure and returns a
      * combinationResult object that stores the result of the
@@ -100,12 +111,20 @@ public:
     void readConfigFile(const std::string & filename);
     std::vector<std::vector<combinationResult> >
     scanCorrelations(std::ostream& out, const combinationResult& nominal, const std::string& outdir="")const;
+
+    std::vector<combinationResult>
+    scanExcludeBins(std::ostream& out, const combinationResult& nominal)const;
     void printCorrelationMatrix()const;
     void associate(const TString & a, const TString& outname);
 
     static bool debug;
+
+    bool isNormalisedDifferentialInput()const{
+        return isdifferential_ && normalised_input_;
+    }
 private:
 
+    void checkConsistency()const;
 
     void createExternalCorrelations();
     void associatePriv(const TString & a, const TString& outname);
@@ -219,7 +238,8 @@ private:
 
     //double resolvethresh_;
 
-    bool isdifferential_,hasUF_,hasOF_;
+    bool isdifferential_,hasUF_,hasOF_, normalised_input_;
+    int excludebin_;
 
     static const double maxcorr_;
 

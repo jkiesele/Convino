@@ -65,7 +65,7 @@ public:
 	 * Fills the combination result to a TGraphAsymmErrors.
 	 * In case, the initial input had underflow or overflow bins,
 	 * these can be removed from the visible area.
-	 * The advantage of a TGraphAsymmErrors is that asymmetric uncerainties
+	 * The advantage of a TGraphAsymmErrors is that asymmetric uncertainties
 	 * are properly displayed.
 	 */
 	void fillTGraphAsymmErrors(TGraphAsymmErrors*, bool cutUFOF=false)const;
@@ -75,6 +75,10 @@ public:
 	 */
 	double getChi2min() const {
 		return chi2min_;
+	}
+
+	int getExcludeBin()const{
+	    return excludebin_;
 	}
 
 	/**
@@ -92,6 +96,12 @@ public:
 	const std::vector<double>& getCombErrup() const {
 		return comberrup_;
 	}
+
+	/**
+	 * Returns a vector of the symmetrised uncertainties using the maximum of up and down variation
+	 */
+	std::vector<double> getCombSymmErr() const;
+
 	/**
 	 * Returns a vector of the combined values.
 	 */
@@ -179,6 +189,7 @@ protected:
 	std::vector<double> constraints_;
 	double chi2min_;
 	bool isdifferential_,hasUF_,hasOF_;
+	int excludebin_;
 };
 
 

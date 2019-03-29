@@ -9,6 +9,7 @@ The other blocks are commented individually
 
     isDifferential = true
     normalise = true
+    normalisedInput = true
 
 [end global]
 

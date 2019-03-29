@@ -21,6 +21,7 @@
 #include "graphCosmetics.h"
 #include "TStyle.h"
 #include "fitfunction.h"
+#include <iomanip>
 
 #ifdef USE_MP
 #include <omp.h>
@@ -125,8 +126,9 @@ void combiner::readConfigFile(const std::string & filename){
     if(fr.getValue<bool>("normalise",false))
         normconstr=100;
     norm_constraint_ = fr.getValue<float>("normConstraint",normconstr);
+    normalised_input_ = fr.getValue<bool>("normalisedInput",false);
 
-std::cout << norm_constraint_ << std::endl; //debug
+
     fr.setRequireValues(true);
     fr.setStartMarker("[inputs]");
     fr.setEndMarker("[end inputs]");
@@ -272,6 +274,16 @@ void combiner::addMeasurement( measurement m){
     allparas.insert(allparas.end(),m.getParameters().begin(),m.getParameters().end());
     allsysparas_.insert(allsysparas_.end(), m.getLambdas().begin(), m.getLambdas().end());
     createExternalCorrelations();
+}
+
+void combiner::checkConsistency()const{
+    if(isdifferential_ && excludebin_>=0 && norm_constraint_ == 0)
+        throw std::logic_error("Trying to exclude a bin without normalisation constraint on result will never converge.");
+    if(!isdifferential_ && (excludebin_>=0 || norm_constraint_>0))
+        throw std::logic_error("Input marked as not differential but trying to exclude a bin or applying norm constraint. Please check consistency of input configuration");
+    if(!isdifferential_ && normalised_input_)
+        throw std::logic_error("Input marked as not differential but as normalised. Please check consistency of input configuration");
+
 }
 
 
@@ -546,7 +558,70 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
 }
 
 
+std::vector<combinationResult>
+combiner::scanExcludeBins(std::ostream& out, const combinationResult& nominal)const{
+    std::vector<combinationResult> output;
+    if(!isdifferential_) return output;
+    if(measurements_.size()<1){
+        throw std::out_of_range("combiner::scanLeastExcludeBins: no measurements associated");
+    }
+    int nombin = measurements_.at(0).getLeastSignificantBin();
+    int nbins = measurements_.at(0).getEstimates().size();
+
+    for(int i=0;i<nbins;i++){
+        combiner ccp=*this;
+        if(i==nombin)continue;
+        ccp.setExcludeBin(i);
+        combinationResult res = ccp.combinePriv();
+        output.push_back(res);
+    }
+
+    //make the output nicely readable: (only relative differnece per bin w.r.t. total unc and nominal value)
+    const auto nomcomb = nominal.getCombined();
+    const auto nomerr = nominal.getCombSymmErr();
+    const auto names = nominal.getCombNames();
+
+    out << "d/sigma: difference to nominal exclude bin result w.r.t. nominal total uncertainty\n";
+    out << "dsigma/sigma: difference to nominal exclude bin error w.r.t. nominal error\n";
+    out << "d/nom: difference to nominal exclude bin result w.r.t nominal value\n";
+
+    for(size_t i=0;i<output.size();i++){
+        out << "\n\nExclude bin " << output.at(i).getExcludeBin() << ":\n\n";
+        out << "   bin     " << "  |  d/sigma [%]  |   dsigma/sigma [%] |   d/nom [%]\n";
+        auto scanerr = output.at(i).getCombSymmErr();
+
+        for(size_t j=0;j<nomcomb.size();j++){
+            out << std::setw(11) <<  names.at(j) << "  | ";
+
+            double diff = (output.at(i).getCombined().at(j) - nomcomb.at(j));
+            double d_o_sigma = 100. * diff / nomerr.at(j);
+            double dsigma_o_sigma = 100. * scanerr.at(j) / nomerr.at(j);
+            double d_o_nom = 100. * diff / nomcomb.at(j);
+
+            out << std::setprecision(3) << std::setw(11) << d_o_sigma << "   | ";
+            out << std::setprecision(3) << std::setw(17) << dsigma_o_sigma << "  |  ";
+            out << std::setprecision(3) << std::setw(5) << d_o_nom << "\n";
+        }
+    }
+
+    out << "\n\n\n --- detailed information ---\n\n\n";
+    out << "Nominal exclude bin "  << nominal.getExcludeBin() << "\n\n";
+    nominal.printFullInfo(out);
+    for(const auto & c: output){
+        out << "\n\n\n --------- \n\n\n";
+        out << "Exclude bin " << c.getExcludeBin() << ":\n\n";
+        c.printFullInfo(out);
+    }
+
+
+
+    return output;
+}
+
+
 combinationResult combiner::combine()const{
+    if(measurements_.size()<1)
+        throw std::logic_error("combiner::combine: no measurement to combine associated");
     combiner cp=*this;
     return cp.combinePriv();
 }
@@ -555,7 +630,7 @@ combinationResult combiner::combinePriv(){
     if(debug)
         std::cout << "combiner::combine" <<std::endl;
 
-
+    checkConsistency();
 
     combinationResult out;
     /*
@@ -626,6 +701,11 @@ combinationResult combiner::combinePriv(){
         throw std::runtime_error("combiner::combinePriv: external correlations non invertible or not positive definite");
     }
 
+
+    if(excludebin_ >= 0){
+        for(auto & m: measurements_)
+            m.setExcludeBin(excludebin_);
+    }
 
     /*
      *********   Configure the fitter and do the fit
@@ -747,6 +827,7 @@ combinationResult combiner::combinePriv(){
     }
     out.hasUF_=hasUF_;
     out.hasOF_=hasOF_;
+    out.excludebin_ = excludebin_;
 
     clear(); //to be sure this instance is not used anymore
     return out;
@@ -767,7 +848,21 @@ void combiner::setSystCorrelation(const size_t & idxa, const size_t& idxb, const
     external_correlations_.setEntry(idxa,idxb, usecoeff);
 }
 
+void combiner::setExcludeBin(int bin){
+    if(bin>=0 && measurements_.size() && bin >= measurements_.at(0).getEstimates().size())
+        throw std::out_of_range("combiner::setExcludeBin: bin out of range of input bins");
 
+    excludebin_=bin;
+}
+
+void combiner::setExcludeBinAuto(){
+    /*
+     * check for normalised differential extras
+     */
+    if(isdifferential_ && normalised_input_ ){
+        excludebin_ = measurements_.at(0).getLeastSignificantBin();
+    }
+}
 
 
 
