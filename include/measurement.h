@@ -16,6 +16,7 @@
 #include "TH1D.h"
 #include "namedMatrix.h"
 #include "uncertainty.h"
+#include "TH2.h"
 
 class measurement{
 public:
@@ -118,6 +119,37 @@ public:
 	 * order of the estimates matches.
 	 */
 	void setHessian(const triangularMatrix&h);
+	/**
+     * Defines the Hessian of the measurement.
+     * Additional, non-correlated uncertainties
+     * can be added using the method addSystematics().
+     * This Hessian must not contain systematic uncertainties
+     * if given in TH2X form, since the association
+     * of entries to estimates or uncertainties would become
+     * ambiguous. If this needs to be done, please use
+     * setHessian(const triangularMatrix&h)
+	 */
+    void setEstimateHessian(const TH2D&h, bool includeudof=false);
+
+    /**
+     * Defines the Covariance of the measurement.
+     * Additional, non-correlated uncertainties
+     * can be added using the method addSystematics().
+     * If this is done, it is important that the
+     * order of the estimates matches.
+     */
+    void setCovariance(const triangularMatrix&h);
+    /**
+     * Defines the Covariance of the measurement.
+     * Additional, non-correlated uncertainties
+     * can be added using the method addSystematics().
+     * This Hessian must not contain systematic uncertainties
+     * if given in TH2X form, since the association
+     * of entries to estimates or uncertainties would become
+     * ambiguous. If this needs to be done, please use
+     * setCovariance(const triangularMatrix&h)
+     */
+    void setEstimateCovariance(const TH2D&h, bool includeudof=false);
 
 	/**
 	 * Returns the Hessian matrix (if set)
@@ -154,15 +186,7 @@ public:
 	 */
 	void setParameterValue(const TString & name, const double& val);
 
-	/**
-	 * Defines the target normalisation.
-	 * Default is 1.
-	 */
-	void setNormalisationTarget(double norm=1){
-	    normalisation_target_=norm;
-	}
 
-	double getNormalisationScaling()const;
 
 	/**
 	 * Excludes one bin for a differential, normalised measurement. Starting from 0
@@ -170,6 +194,10 @@ public:
 	 * Resets with bin<0
 	 */
 	void setExcludeBin(int bin);
+
+	int getExcludeBin()const{
+	  return excludebin_;
+	}
 
 	/**
 	 * Uses stat only for estimation!
@@ -188,11 +216,13 @@ public:
 	void associateEstimate(const TString & est_name, const size_t & comb_idx);
 	void associateAllLambdas(const triangularMatrix& fullLambdaCorrs);
 	const std::vector<parameter> & getParameters()const{return paras_;}
+	std::vector<TString> getParameterNames()const;
 	void setup();
 	double evaluate(const double* pars, double* df, const bool& pearson, const size_t& maxidx)const;
-	double evaluate_normalisation(const double* pars, double* df, const bool& pearson, const size_t& maxidx)const;
+
 	const std::vector<parameter> & getLambdas()const{return lambdas_;}//for priors
 	const std::vector<parameter> & getEstimates()const{return x_;}
+    std::vector<TString> getEstimateNames()const;
 	const parameter& getParameter(const TString& name)const;
 	bool isDifferential()const{return isDifferential_;}
 	const bool& hasUF()const{return hasUF_;}
@@ -203,6 +233,8 @@ public:
 private:
 
 	void copyFrom(const measurement& r);
+	std::vector<TString> create_default_estnames(size_t nnames)const;
+	int searchExcludeBinIndex(const triangularMatrix&, TString & name)const;
 
 	bool setup_;
 
@@ -237,8 +269,10 @@ private:
 	static size_t nobjects_;
 
 	bool isDifferential_;
-    double normalisation_,normalisation_target_;
-    int excludebin_;
+    int excludebin_; //just bookkeeping
+    TString excludedestname_;
+    bool bypass_logic_check_;
+    size_t this_obj_counter_;
 };
 
 

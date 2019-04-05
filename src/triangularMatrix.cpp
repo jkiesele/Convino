@@ -75,8 +75,15 @@ const size_t& triangularMatrix::getEntryIndex(const TString& name)const{
 size_t triangularMatrix::getEntryIndexUS(const TString& name)const{
 	size_t idx=names_.getIndex(name);
 	if(idx>=names_.size())
-		return SIZE_MAX;
+	    return SIZE_MAX;
 	return idx;
+}
+std::vector<TString> triangularMatrix::createNamesVector()const{
+    std::vector<TString> out(size());
+    for(size_t i=0;i<size();i++){
+        out[i]=names_.getData(i);
+    }
+    return out;
 }
 
 void triangularMatrix::removeEntries(const std::vector<size_t>& idxs){
@@ -342,6 +349,25 @@ void triangularMatrix::importTMatrix(const TMatrixD& in){
 
 }
 
+void triangularMatrix::fillFromTH2(const TH2D& h, bool includeufof){
+    if(h.GetNbinsX() != h.GetNbinsY())
+        throw std::out_of_range("triangularMatrix::fillFromTH2: input not symmetric");
+    size_t start=1,end=h.GetNbinsX()+1;
+    if(includeufof){
+        start=0;
+        end++;
+    }
+    if(end-start != size())
+        throw std::out_of_range(((TString)"triangularMatrix::fillFromTH2: input size "+ (end-start) + (TString)" does not match matrix size "+
+                size()).Data());
+
+    for(size_t i=0;i<size();i++){
+        for(size_t j=i;j<size();j++){
+            setEntry(i,j,h.GetBinContent(i+start,j+start));
+        }
+    }
+}
+
 
 void triangularMatrix::reOrder(const std::vector<TString>& neworder){
 	bool failed=false;
@@ -490,6 +516,17 @@ const double& correlationMatrix::getEntry(const size_t & r, const size_t & c)con
 
 std::ostream& operator<<(std::ostream& os, const triangularMatrix& m)
 {
+    double min,max;
+    m.getMinMaxEntry(min,max,false);
+    double delta = max-min;
+    double scaler=1;
+    while(delta && delta*scaler < 1)scaler*=10;
+    while(delta && delta*scaler > 10)scaler*=0.1;
+
+    if(scaler <= 0.01 || scaler >= 100)
+        os << "multiplied by: " << scaler <<'\n';
+    else
+        scaler=1;
 	std::streamsize save=os.width();
 	os.width(4);
 	size_t maxnamewidth=0;
@@ -501,7 +538,7 @@ std::ostream& operator<<(std::ostream& os, const triangularMatrix& m)
 		os.width(maxnamewidth+1);
 		os << std::left << m.getEntryName(i);
 		for(size_t j=0;j<m.size();j++){
-			double entrd=round(m.getEntry(i,j),0.0001);
+			double entrd=round(m.getEntry(i,j)*scaler,0.001);
 			std::string entr=toString(entrd);
 			os << textFormatter::fixLength(entr,6);
 			os <<" ";

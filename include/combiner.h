@@ -34,10 +34,11 @@ class fitfunctionBase;
 class combiner{
     friend class fitfunctionBase;
 public:
-    combiner():lh_mod_(lh_mod_neyman),npars_(0),nest_(0),norm_constraint_(0),
+    combiner():lh_mod_(lh_mod_neyman),npars_(0),nest_(0),
     lowestchi2_(1e19),isdifferential_(false),hasUF_(false),hasOF_(false),
     normalised_input_(false),
-    excludebin_(-1){}
+    excludebin_(-1),
+    normalise_(false){}
     ~combiner(){clear();}
     enum lh_mod{lh_mod_neyman,lh_mod_pearson};
 
@@ -80,13 +81,14 @@ public:
      */
     void setSystCorrelation(const size_t & idxa, const size_t& idxb, const double& coeff);
 
-    void setExcludeBin(int bin);
+    void setExcludeBin(int bin){
+        excludebin_=bin;
+    }
 
     int getExcludeBin()const{
         return excludebin_;
     }
 
-    void setExcludeBinAuto();
 
     /**
      * Starts the combination procedure and returns a
@@ -96,16 +98,6 @@ public:
     combinationResult combine()const;
 
 
-    /**
-     * Sets the strength of the norm constraint.
-     * TBI: could be based some fraction of smallest uncertainty per measurement as default
-     * But as a starting point 100 (1% of total chi2+1) should be good.
-     */
-    void setNormConstraint(double constraint = 100){
-        if(!isdifferential_ && constraint)
-            throw std::logic_error("combiner::setNormConstraint only possible for differential measurements");
-        norm_constraint_=constraint;
-    }
 
     ///// ----- helpers for text-based interface -----
     void readConfigFile(const std::string & filename);
@@ -225,7 +217,6 @@ private:
     std::vector<parameter>  allparas;
     std::vector<std::pair< TString, std::vector<TString> > > tobecombined_;
 
-    double norm_constraint_;
 
     //measurement allmeas_;
 
@@ -240,10 +231,12 @@ private:
 
     bool isdifferential_,hasUF_,hasOF_, normalised_input_;
     int excludebin_;
+    bool normalise_;
 
     static const double maxcorr_;
 
     static bool dummyrun_;//< for debugging purposes
+
 };
 
 

@@ -139,16 +139,17 @@ int main(int argc, char* argv[]){
             ignoreufof=true;
         }
         else if(targv.BeginsWith("-")){
-            if(i+1>=argc || ((TString)argv[i+1]).BeginsWith("-")){
-                std::cerr << "please specify a valid option argument" <<std::endl;
-                exit(-1);
-            }
-            TString next=argv[++i];
+
             if(targv.Contains("h")){
                 coutHelp();
                 exit(0);
             }
             if(targv == "-i"){
+                if(i+1>=argc || ((TString)argv[i+1]).BeginsWith("-")){
+                    std::cerr << "please specify a valid option argument" <<std::endl;
+                    exit(-1);
+                }
+                TString next=argv[++i];
                 if(next == "cov"){
                     outputname="covariance";
                 }
@@ -160,10 +161,16 @@ int main(int argc, char* argv[]){
                 }
                 else{
                     std::cerr << "please specify a valid option argument" <<std::endl;
+                    coutHelp();
                     exit(-1);
                 }
             }
             else if(targv == "-p"){
+                if(i+1>=argc || ((TString)argv[i+1]).BeginsWith("-")){
+                    std::cerr << "please specify a valid option argument" <<std::endl;
+                    exit(-1);
+                }
+                TString next=argv[++i];
                 prefix=next;
             }
 

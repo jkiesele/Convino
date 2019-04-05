@@ -11,6 +11,7 @@
 #include "helpers.h"
 #include "TRandom3.h"
 #include "TMatrixDEigen.h"
+#include "textFormatter.h"
 //#include "averager.h"
 #ifdef USE_MP
 #include <omp.h>
@@ -22,6 +23,30 @@
 
 
 bool matrixHelper::debug=false;
+
+
+std::ostream& operator<<(std::ostream& os, const TMatrixD& m){
+    std::streamsize save=os.width();
+    os<<'\n';
+    os.width(4);
+    size_t maxnamewidth=5;
+
+    for(int i=0;i<m.GetNrows();i++){
+        os.width(maxnamewidth+1);
+        os << std::left << i;
+        for(int j=0;j<m.GetNcols();j++){
+            double entrd=round(m[i][j] ,0.0001);
+            std::string entr=toString(entrd);
+            os << textFormatter::fixLength(entr,6);
+            os <<" ";
+        }
+        os<<'\n';
+    }
+
+    os.width(save);
+    return os;
+
+}
 
 matrixHelper::matrixHelper(const TMatrixD &m):strategy_(mhs_weighted),origm_(m),threshold_(0.001),rand_(0),ncalls_(100),
 		alwaysset_(-1){

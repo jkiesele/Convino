@@ -32,6 +32,7 @@ protected:
 	}
 private:
 	const combiner * c;
+
 };
 
 #define INHERITFROM ROOT::Math::IBaseFunctionMultiDim //

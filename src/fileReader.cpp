@@ -172,9 +172,9 @@ fileReader::read_return fileReader::readFilePriv(const std::string& filename){
 void fileReader::readFile(const std::string &filename){
 	read_return ret=readFilePriv(filename);
 	if(ret==read_nomarker)
-		throw std::runtime_error("fileReader::readFile: end marker set but never reached.");
+		throw std::runtime_error("fileReader::readFile: marker ended by "+ end_ +" set but never reached.");
 	if(ret==read_failed)
-		throw std::runtime_error("fileReader::readFile: read failed.");
+		throw std::runtime_error("fileReader::readFile: read failed for "+filename +". Check if file exists");
 
 }
 
@@ -191,7 +191,7 @@ void fileReader::addFromFile(const std::string& filename){
         lines_.insert(lines_.end(),copyFR.lines_.begin(),copyFR.lines_.end());
     }
     catch(std::exception& e){
-        std::cerr << "error in fileReader::addFromFile:" <<std::endl;
+        std::cerr << "error in fileReader::addFromFile: "<< e.what() <<std::endl;
         throw e;
     }
 }

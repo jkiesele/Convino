@@ -10,6 +10,9 @@
 #include <iostream>
 #include "TMatrixD.h"
 #include <fstream>
+#include "TGraphAsymmErrors.h"
+#include "TFile.h"
+#include "TH2D.h"
 
 
 void coutHelp(){
@@ -25,7 +28,8 @@ void coutHelp(){
     std::cout << "                normalised differential inputs\n";
 	std::cout << "\n-s              enable scan of correlation assumptions\n";
 	std::cout << "\n-p              create plots for the correlation scans in .pdf format\n";
-	std::cout << "                (a directory will be created)\n";
+    std::cout << "                (a directory will be created)\n";
+    std::cout << "\n-r              create root output file <results.root> with result (TGraph and TH2D for matrices)\n";
 	std::cout << "\n--prefix <pref> define a prefix for the output files/directories\n";
     std::cout << "\n--excludebin <bin> force specific exclude bin\n";
     std::cout << "\n--neyman        use neyman chi2 (faster)\n";
@@ -44,16 +48,23 @@ int main(int argc, char* argv[]){
 	if(argc<2)
 		return -1;
 	std::string infile;
+	TString roothistoinfile="";
+	TString roothistoin="";
 	bool doscan=false;
 	bool doexcludebinscan=false;
+	bool rootoutput=false;
 	int excludebin=-1;
 	//very simple parsing
 	for(int i=1;i<argc;i++){
 		TString targv=argv[i];
 		if(targv.BeginsWith("--")){
-			if(targv == ("--neyman"))
+		    if(targv == ("--help")){
+		                    coutHelp();
+		                    exit(0);
+		                }
+		    else if(targv == ("--neyman"))
 				comb.setMode(combiner::lh_mod_neyman);
-			if(targv == ("--prefix")){
+		    else if(targv == ("--prefix")){
 				if(i+1>=argc || ((TString)argv[i+1]).BeginsWith("-")){
 					std::cerr << "please specify a valid prefix, e.g. --prefix <prefix>" <<std::endl;
 					exit(-1);
@@ -61,17 +72,22 @@ int main(int argc, char* argv[]){
 				outputprefix=argv[++i];
 				comb.setOutputPrefix(outputprefix);
 			}
-			if(targv == ("--excludebin")){
+			else if(targv == ("--excludebin")){
                 if(i+1>=argc || ((TString)argv[i+1]).BeginsWith("-")){
-                    std::cerr << "please specify a valid prefix, e.g. --prefix <prefix>" <<std::endl;
+                    std::cerr << "please specify a valid input, e.g. --excludebin 3" <<std::endl;
                     exit(-1);
                 }
                 excludebin = atoi(argv[++i]);
             }
-			if(targv == ("--help")){
-				coutHelp();
-				exit(0);
-			}
+            else if(targv == ("--ri")){ //TBI upon request
+                if(i+2>=argc || ((TString)argv[i+1]).BeginsWith("-") || ((TString)argv[i+2]).BeginsWith("-")){
+                    std::cerr << "please specify a valid input, e.g. --ri myfile.root myhisto" <<std::endl;
+                    exit(-1);
+                }
+                roothistoinfile = argv[++i];
+                roothistoin = argv[++i];
+            }
+
 		}
 		else if(targv.BeginsWith("-")){ //simple option
 			/*if(targv.Contains("e"))
@@ -84,6 +100,8 @@ int main(int argc, char* argv[]){
 				writeScanPlotPdfs=true;
 			if(targv.Contains("e"))
 			    doexcludebinscan=true;
+            if(targv.Contains("r"))
+                rootoutput=true;
 			if(targv.Contains("h")){
 				coutHelp();
 				exit(0);
@@ -101,6 +119,13 @@ int main(int argc, char* argv[]){
 	}
 	if(outputprefix.length())
 		outputprefix+="_";
+	if(!rootoutput && roothistoinfile.Length()>1){
+	    std::cout << "Warning: The input root file and histograms are only used for binning the output graph in x. If no root output is requested, they are ignored."<<std::endl;
+	}
+
+	if(excludebin>=0){
+	    comb.setExcludeBin(excludebin);
+	}
 
 	comb.readConfigFile(infile);
 
@@ -109,18 +134,6 @@ int main(int argc, char* argv[]){
 	std::cout << "setup done, processing..."<<std::endl;
 
 
-    if(comb.isNormalisedDifferentialInput()){
-        std::cout << "Input is normalised differential. ";
-        if(excludebin<0){
-            std::cout << "No exclude bin given, calculating least significant bin based on first measurement input and statistical uncertainties.";
-            std::cout << std::endl;
-            comb.setExcludeBinAuto();
-            std::cout << "found exclude bin " << comb.getExcludeBin() <<std::endl;
-        }
-        else{
-            comb.setExcludeBin(excludebin);
-        }
-    }
 
 	combinationResult result=comb.combine();
 
@@ -150,6 +163,33 @@ int main(int argc, char* argv[]){
 	        comb.scanExcludeBins(logfilescan,result);
 	        logfilescan.close();
 	    }
+	}
+	if(rootoutput){
+	    TGraphAsymmErrors * g=0;
+
+	    //TBI upon request
+	    if(roothistoinfile){
+	        TFile fin(roothistoinfile,"READ");
+	        if(fin.IsZombie()){
+	            std::cout << "Could not read input root file " + roothistoinfile << std::endl;
+	            exit(-2);
+	        }
+
+	    }
+
+
+	    TFile f("result.root","RECREATE");
+
+	    result.fillTGraphAsymmErrors(g);
+	    g->SetMarkerStyle(21);
+	    g->SetMarkerColor(kBlack);
+        g->SetName("combined_result");
+	    g->Write();
+
+	    //result.getCor
+
+	    f.Close();
+
 	}
 
 	return 0;

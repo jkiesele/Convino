@@ -14,6 +14,7 @@
 #include "TMatrixD.h"
 #include <iostream>
 #include <string>
+#include "TH2.h"
 
 /*
  *
@@ -21,6 +22,8 @@
  * It contains an unambiguous mapping of a name (e.g. uncertainty) to a row / column
  *
  */
+class correlationMatrix;
+
 class triangularMatrix{
 public:
 	triangularMatrix(const size_t &, double def=0);
@@ -38,6 +41,10 @@ public:
 
 	void toTMatrix(TMatrixD& out)const;
 	void importTMatrix(const TMatrixD& in);
+
+	void fillFromTH2(const TH2D&, bool includeufof=false);
+    void createFromTH2(const TH2D&, bool includeufof=false);
+
 	const size_t& size()const{return names_.size();}
 
 	void reOrder(const std::vector<TString>& neworder);
@@ -46,6 +53,7 @@ public:
 	const size_t& getEntryIndex(const TString&)const;
 	//return SIZE_MAX if not found
 	 size_t getEntryIndexUS(const TString&)const;
+	 std::vector<TString> createNamesVector()const;
 
 	void removeEntries(const std::vector<size_t>& idxs);
 	void removeEntry(const size_t& idx);
@@ -54,6 +62,7 @@ public:
 	void invert();
 
 	double determinant()const;
+
 
 	void clear();
 

@@ -18,12 +18,18 @@ class TH1;
 class TGraphAsymmErrors;
 
 class combiner;
+class normaliser;
 
 class combinationResult{
 	friend class combiner;
+	friend class normaliser;
 public:
 	combinationResult();
 
+	combinationResult& operator=(const combinationResult& r){
+	    copyFrom(r);
+	    return *this;
+	}
 	/**
 	 * Returns the number of combined quantities
 	 */
@@ -68,7 +74,7 @@ public:
 	 * The advantage of a TGraphAsymmErrors is that asymmetric uncertainties
 	 * are properly displayed.
 	 */
-	void fillTGraphAsymmErrors(TGraphAsymmErrors*, bool cutUFOF=false)const;
+	void fillTGraphAsymmErrors(TGraphAsymmErrors*&, bool cutUFOF=false)const;
 
 	/**
 	 * Returns the minimum of the combination likelihood
@@ -155,6 +161,12 @@ public:
 		return post_meas_correlations_;
 	}
 
+    /**
+     * Returns a correlationMatrix object containing the
+     * correlations between the combined quantities
+     */
+    const triangularMatrix& getCombinedCovariance() const;
+
 	/**
 	 * Returns a correlationMatrix object containing the
 	 * correlations between the uncertainties after the combination
@@ -185,11 +197,15 @@ protected:
 	correlationMatrix orig_sys_correlations_;
 	correlationMatrix orig_meas_correlations_;
 	correlationMatrix post_sys_correlations_,post_meas_correlations_,post_all_correlations_;
+	mutable triangularMatrix post_meas_covariance_;
 	std::vector<double> pulls_;
 	std::vector<double> constraints_;
 	double chi2min_;
 	bool isdifferential_,hasUF_,hasOF_;
 	int excludebin_;
+
+	void copyFrom(const combinationResult& r);
+
 };
 
 

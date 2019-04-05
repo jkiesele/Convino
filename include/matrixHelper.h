@@ -12,6 +12,7 @@
 #include "TMatrixD.h"
 #include <vector>
 #include "TRandom3.h"
+#include "TMatrixDEigen.h"
 
 
 class matrixHelper{
@@ -55,5 +56,8 @@ private:
 	bool getPositiveDefinitePriv( TMatrixD& m, size_t * neededcalls)const;
 
 };
+
+//helper
+std::ostream& operator<<(std::ostream& os, const TMatrixD& m);
 
 #endif /* INCLUDE_MATRIXHELPER_H_ */

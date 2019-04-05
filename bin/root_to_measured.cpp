@@ -23,6 +23,7 @@ void coutHelp(){
     std::cout << "\n-h              display this help message\n";
 
     std::cout << "\n-p              measurement prefix name (will be added to \"binX\")";
+    std::cout << "\n-a              add to nominal histogram to get syst. varied histogram";
     std::cout << "\n--noufof        do not consider under and overflow bins";
 
     std::cout << std::endl;
@@ -86,6 +87,7 @@ int main(int argc, char* argv[]){
     std::vector<TString> opts;
 
     bool ignoreufof=false;
+    bool addtonominal=false;
 
     for(int i=1;i<argc;i++){
         TString targv=argv[i];
@@ -93,18 +95,29 @@ int main(int argc, char* argv[]){
             ignoreufof=true;
         }
         else if(targv.BeginsWith("-")){
-            if(i+1>=argc || ((TString)argv[i+1]).BeginsWith("-")){
-                std::cerr << "please specify a valid option argument" <<std::endl;
-                exit(-1);
-            }
-            TString next=argv[++i];
 
             if(targv.Contains("h")){
                 coutHelp();
                 exit(0);
             }
             else if(targv == "-p"){
+                if(i+1>=argc || ((TString)argv[i+1]).BeginsWith("-")){
+                    std::cerr << "please specify a valid option argument" <<std::endl;
+                    coutHelp();
+                    exit(-1);
+                }
+                TString next=argv[++i];
                 prefix=next;
+            }
+
+            else if(targv.Contains("a")){
+                addtonominal=true;
+            }
+            else{
+
+                std::cerr << "please specify a valid option argument" <<std::endl;
+                coutHelp();
+                exit(-1);
             }
 
         }
@@ -162,6 +175,8 @@ int main(int argc, char* argv[]){
         out+=i;
         out+="  ";
         double nominal_val=nominal.at(i);
+        if(addtonominal)
+            nominal_val=0;
         for(size_t j=0;j<systs.size();j++){
             out+=systs.at(j).second.at(i)-nominal_val;
             out+=" ";
