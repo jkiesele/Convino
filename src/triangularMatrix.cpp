@@ -120,6 +120,26 @@ void triangularMatrix::invert(){
 	invert(det);
 }
 
+triangularMatrix triangularMatrix::createHessianFromCovariance()const{
+    if(determinant()>0){
+        triangularMatrix cp=*this;
+        cp.invert();
+        return cp;
+    }
+    triangularMatrix cp=*this;
+    //get sigmas
+    std::vector<double> sigmasq(size());
+    for(size_t i=0;i<size();i++)
+        sigmasq.at(i)=getEntry(i,i);
+
+    for(size_t i=0;i<size();i++){
+        for(size_t j=0;j<=i;j++){
+            cp.setEntry(i,j,getEntry(i,j)/(sigmasq.at(i)*sigmasq.at(j)));
+        }
+    }
+    return cp;
+}
+
 double triangularMatrix::determinant()const{
 	TMatrixD m;
 	toTMatrix(m);

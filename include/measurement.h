@@ -95,6 +95,13 @@ public:
 	void addSystematics(const TString& name, std::vector<double> variedmeas);
 
     /**
+     * Adds a global relative systematic uncertainty which is uncorrelated
+     * to all others. Correlations between the uncertainties
+     * can be defined only by using the setHessian() method
+     */
+    void addSystematics(const TString& name, double scaler);
+
+    /**
      * Adds an asymmetric systematic uncertainty which is uncorrelated
      * to all others. Correlations between the uncertainties
      * can be defined only by using the setHessian() method
@@ -209,6 +216,13 @@ public:
 	    isDifferential_=isdiff;
 	}
 
+	void setIsNormalisedInput(bool isn){
+	    isnormalisedinput_=isn;
+	}
+
+	bool isNormalisedInput()const{
+	    return isnormalisedinput_;
+	}
 
 	/////// interface to combined class. Should not be used by the user ///////
 
@@ -219,6 +233,8 @@ public:
 	std::vector<TString> getParameterNames()const;
 	void setup();
 	double evaluate(const double* pars, double* df, const bool& pearson, const size_t& maxidx)const;
+
+	double getCombSum(const double * pars)const;
 
 	const std::vector<parameter> & getLambdas()const{return lambdas_;}//for priors
 	const std::vector<parameter> & getEstimates()const{return x_;}
@@ -270,9 +286,11 @@ private:
 
 	bool isDifferential_;
     int excludebin_; //just bookkeeping
+    bool isnormalisedinput_;
     TString excludedestname_;
     bool bypass_logic_check_;
     size_t this_obj_counter_;
+    static bool removeexcludebin;
 };
 
 

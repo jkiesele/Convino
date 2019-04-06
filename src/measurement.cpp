@@ -19,9 +19,11 @@
 
 bool measurement::debug=false;
 size_t measurement::nobjects_=0;
+bool measurement::removeexcludebin=false;
 
 measurement::measurement():setup_(false),hasUF_(false), hasOF_(false),isDifferential_(false),
         excludebin_(-1),
+        isnormalisedinput_(false), //FIXME not used really, is replaced by excludebin_>=0
         bypass_logic_check_(false){
     this_obj_counter_=nobjects_;
 	nobjects_++;
@@ -59,13 +61,15 @@ void measurement::readFromFile(const std::string& infile){
 	fr.setComment("#");
 	isDifferential_=false;
 
+
+
 	excludedestname_="bin";
 	excludedestname_+=excludebin_;
 
 	if(fr.hasNonEmptyMarker(infile,"hessian")){
 		hessian.readFromFile(infile, "hessian");
 		int excl = searchExcludeBinIndex(hessian,excludedestname_);
-		if(excl>=0)
+		if(excl>=0 && removeexcludebin)
 		    hessian.removeEntry(excl);
 		setHessian(hessian);
 	}
@@ -76,7 +80,7 @@ void measurement::readFromFile(const std::string& infile){
 
 		corr.readFromFile(infile,"correlation matrix");
         int excl = searchExcludeBinIndex(corr,excludedestname_);
-        if(excl>=0)
+        if(excl>=0 && removeexcludebin)
             corr.removeEntry(excl);
 
 		setHessian(corr); //creates parameters
@@ -92,7 +96,7 @@ void measurement::readFromFile(const std::string& infile){
 				throw std::runtime_error("measurement::readFromFile: please provide the fitted constraints for all parameters when using a correlation matrix");
 
 			TString sysname = fr.getData<TString>(i,0);
-			if(sysname == excludedestname_) continue;
+			if(sysname == excludedestname_ && removeexcludebin) continue;
 
 			TString constraintstr = fr.getData<TString>(i,1);
 
@@ -152,7 +156,7 @@ void measurement::readFromFile(const std::string& infile){
 			std::vector<uncertainty> vunc;
 			for(size_t e=0;e<fr.nEntries(l);e++){
 			    TString thisentry = fr.getData<TString>(l,e);
-			    if(excludebin_>=0 && thisentry.EndsWith(excludedestname_)){
+			    if(excludebin_>=0 && thisentry.EndsWith(excludedestname_) && removeexcludebin){
 			        excludedestname_ = thisentry;
 			        continue;
 			    }
@@ -241,7 +245,7 @@ void measurement::readFromFile(const std::string& infile){
 	for(size_t i=0;i<n_est;i++){
 		std::string istr     = toString(i);
 		TString estimatename = fr.getValue<TString>("name_"+istr);
-		if(excludebin_>=0 && estimatename.EndsWith(excludedestname_)) continue;
+		if(excludebin_>=0 && estimatename.EndsWith(excludedestname_) && removeexcludebin) continue;
 		const double value   = fr.getValue<double>("value_"+istr);
 
 		size_t idx=SIZE_MAX;
@@ -326,12 +330,13 @@ void measurement::setMeasured(const std::vector<double>& meas, const std::vector
 		throw std::logic_error("measurement::setMeasured: measurement vector must be of same size as stat vector");
 	isDifferential_=true;
 
+
 	//remove exclude bin here!! //TBIExclude
 
 	std::vector<TString> estnames=create_default_estnames(meas.size());
 	std::vector<TString> used_estnames;
 	for(size_t e=0;e<meas.size();e++){
-	    if(e==excludebin_)continue;
+	    if(e==excludebin_ && removeexcludebin)continue;
 		parameter pe;
 		pe.setType(parameter::para_estimate);
 		pe.setStat(stat.at(e));
@@ -384,6 +389,21 @@ void measurement::addSystematics(const TString& name, std::vector<double> varied
     }
     addSystematics(name,uncs);
 }
+
+void measurement::addSystematics(const TString& name, double scaler){
+    std::vector<uncertainty>  uncs;
+    size_t i=0;
+    for(const auto& p:paras_){
+        if(p.getType()==parameter::para_estimate){
+            double variedmeas = p.getNominalVal() * scaler - p.getNominalVal();
+            uncs.push_back(uncertainty(variedmeas,-variedmeas));
+            i++;
+        }
+    }
+    addSystematics(name,uncs);
+}
+
+
 void measurement::addSystematics(const TString& name, std::vector<uncertainty> variedmeas){
 
 
@@ -414,7 +434,7 @@ void measurement::setHessian(const triangularMatrix&h){
 	h.toTMatrix(H);
 	matrixHelper m(H);
 	if(! m.checkMatrixPosDefinite(H))
-		throw std::runtime_error("measurement::setHessian(const triangularMatrix&h): Hessian not positive definite");
+		std::cout << "Warning: measurement::setHessian(const triangularMatrix&h): Hessian not positive definite. Fit might fail" << std::endl;;
 
 	H_=h;
 
@@ -440,7 +460,7 @@ void measurement::setEstimateHessian(const TH2D&h, bool includeudof){
             throw std::runtime_error("measurement::setCovariance(const TH2&h): first set nominal input, then set esimate Hessian");
 
     triangularMatrix m(getEstimateNames());
-    if(excludebin_>-1){
+    if(excludebin_>-1 && removeexcludebin){
         TH2D h2 = removeOneBin(h,excludebin_);
         m.fillFromTH2(h2,includeudof);
     }
@@ -459,12 +479,16 @@ void measurement::setCovariance(const triangularMatrix&h){
     h.toTMatrix(H);
     matrixHelper m(H);
     if(! m.checkMatrixPosDefinite(H)){
-        std::cout << h << std::endl;
-        throw std::runtime_error("measurement::setCovariance(const triangularMatrix&h): Covariance not positive definite");
+        std::cout << "Warning: measurement::setCovariance(const triangularMatrix&h): Covariance not positive definite" << std::endl;
+        std::cout << "Will try to construct Hessian nevertheless. But fit might fail." <<std::endl;
+        triangularMatrix hes = h.createHessianFromCovariance();
+        setHessian(hes);
     }
-    triangularMatrix hcp=h;
-    hcp.invert();
-    setHessian(h);
+    else{
+        triangularMatrix hcp=h;
+        hcp.invert();
+        setHessian(hcp);
+    }
 
 }
 
@@ -472,7 +496,7 @@ void measurement::setEstimateCovariance(const TH2D&h, bool includeudof){
     if(!paras_.size())
         throw std::runtime_error("measurement::setCovariance(const TH2&h): first set nominal input, then set esimate Covariance");
     triangularMatrix m(getEstimateNames());
-    if(excludebin_>-1){
+    if(excludebin_>-1 && removeexcludebin){
         TH2D h2 = removeOneBin(h,excludebin_);
         m.fillFromTH2(h2,includeudof);
     }
@@ -523,7 +547,7 @@ void measurement::setParameterValue(const TString & name, const double& val){
 
 
 void measurement::setExcludeBin(int bin){
-    if(x_.size())
+    if(false && paras_.size()) //FIXME
         throw std::out_of_range("measurement::setExcludeBin: exclude bin needs to be set before any input is read");
     excludebin_=bin;
 }
@@ -861,11 +885,20 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 	//x^2 part - symmetric
 	double combsum=0;
 	for(size_t mu=0;mu<nx;mu++){
+	    if((int)mu!=excludebin_)
+	        combsum += pars[x_.at(mu).getAsso()];
+	}
+	double rest_norm_comb = 1 - combsum;
+
+
+	for(size_t mu=0;mu<nx;mu++){
 
 
 		double x_comb_mu = pars[x_.at(mu).getAsso()];
+		if(excludebin_ == (int) mu)
+		    x_comb_mu=rest_norm_comb;
+
 		double x_meas_mu = x_.at(mu).getNominalVal();
-		combsum+=x_comb_mu;
 
 		for(size_t i=0;i<nlamb;i++){
 			if(! lambdas_.at(i).isRelative()) continue;
@@ -884,6 +917,8 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 			double x_comb_nu = pars[x_.at(nu).getAsso()];
 			double x_meas_nu = x_.at(nu).getNominalVal();
 
+	        if(excludebin_ == (int) nu)
+	            x_comb_nu=rest_norm_comb;
 
 			for(size_t i=0;i<nlamb;i++){
 				if(! lambdas_.at(i).isRelative()) continue;
@@ -950,6 +985,15 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 	double out=xsqpart + copart;
 
 	return out;
+}
+
+double measurement::getCombSum(const double * pars)const{
+    const size_t nx=x_.size();
+    double combsum=0;
+    for(size_t mu=0;mu<nx;mu++){
+        combsum += pars[x_.at(mu).getAsso()];
+    }
+    return combsum;
 }
 
 /////////// privates //////////

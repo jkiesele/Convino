@@ -61,6 +61,14 @@ public:
 	void invert(double& det);
 	void invert();
 
+	/**
+	 * this creates a Hessian from a covariance,
+	 * NOT assuming it to be positive definite,
+	 * or trying to invert it. BUT assuming everything to
+	 * be Gaussian etc.
+	 */
+	triangularMatrix createHessianFromCovariance()const;
+
 	double determinant()const;
 
 

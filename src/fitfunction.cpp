@@ -41,6 +41,10 @@ void fitfunctionBase::eval(const double*x, double& f, double* df)const{
 	    throw std::out_of_range("fitfunctionBase::eval: No measurements associated");
 
 
+	if(meass.at(0).getExcludeBin()>=0){
+	    double combsum = meass.at(0).getCombSum(x);
+	    f_int+= 1e6*(1 - combsum)*(1 - combsum);
+	}
 	const size_t nsys=c->npars_-c->nest_;
 
 	const double sqrt2 = std::sqrt(2);

@@ -35,10 +35,10 @@ public:
         out_res = combinationResult();
     }
 
-    combinationResult getNormalised()const;
+    combinationResult getNormalised(double addUncertFraction=0., int bin=-1)const;
 
     TH1D * getNormalisedTH1D()const;
-    TH2D * getNormalisedCovarianceTH2D()const;
+    TH2D * getNormalisedCovarianceTH2D(double addUncertFraction=0., int bin=-1)const;
 
 private:
     //helper

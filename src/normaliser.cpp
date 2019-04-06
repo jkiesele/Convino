@@ -39,7 +39,7 @@ void normaliser::setInput(const TH1D* h1d, const TH2D* h2d){
     setInput(in_res_);
 }
 
-combinationResult normaliser::getNormalised()const{
+combinationResult normaliser::getNormalised(double addUncertFraction, int bin)const{
     //set up inputs for normalised
 
     auto cov = in_res_.getCombinedCovariance();
@@ -84,7 +84,10 @@ combinationResult normaliser::getNormalised()const{
     triangularMatrix newcov = cov;
     for(size_t i=0;i<nbins;i++){
         for(size_t j=0;j<=i;j++){
-            newcov.setEntry(i,j, covfilled[i][j] / (double)iterations_);
+            if((int)i==bin && (int)j==bin)
+                newcov.setEntry(i,j, covfilled[i][j]*(1.+addUncertFraction) / (double)iterations_);
+            else
+                newcov.setEntry(i,j, covfilled[i][j] / (double)iterations_);
         }
     }
 
@@ -122,9 +125,9 @@ TH1D * normaliser::getNormalisedTH1D()const{
     return h;
 
 }
-TH2D * normaliser::getNormalisedCovarianceTH2D()const{
+TH2D * normaliser::getNormalisedCovarianceTH2D(double addUncertFraction, int bin)const{
     if(out_res.combined_.size()<1)
-        out_res=getNormalised();
+        out_res=getNormalised(addUncertFraction,bin);
 
     TH2D * h = new TH2D("normalised_covariance","normalised_covariance", out_res.combined_.size(), 0 , out_res.combined_.size(),
              out_res.combined_.size(), 0 , out_res.combined_.size());
