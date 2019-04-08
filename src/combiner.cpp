@@ -734,7 +734,7 @@ combinationResult combiner::combinePriv(){
     // iterative increase of auglagrangemu_,auglagrangelambda_
     // until measurements_.at(0).getCombSum(&fitter.getParameters()->at(0)) + delta; is close enough to 1.
 
-    if(normaliseinfit_){
+    if(normaliseinfit_ && false){
         auglagrangemu_=1;
         auglagrangelambda_=1;
         double sumdiff = 1;
@@ -770,16 +770,25 @@ combinationResult combiner::combinePriv(){
         //loop end
     }
 
-
-    fitter.fit();
-    fitter.feedErrorsToSteps();
+    if(debug)
+        std::cout << "combiner::combine: first rough fit" <<std::endl;
+    //fitter.setStrategy(0);
+    //fitter.setTolerance(1.);
+    //fitter.setFastMode(true);
+    //fitter.fit();
+    //fitter.feedErrorsToSteps();
+    //fitter.setFastMode(false);
     fitter.setStrategy(2);
     fitter.setTolerance(0.1);
+    if(debug)
+        std::cout << "combiner::combine: second precision fit" <<std::endl;
     fitter.fit();
     if(!fitter.wasSuccess()){
         throw std::runtime_error("combiner::combine: fit not successful");
     }
 
+    if(debug)
+        std::cout << "combiner::combine: fit done, saving results" <<std::endl;
     /*
      *********  Save the results
      */
