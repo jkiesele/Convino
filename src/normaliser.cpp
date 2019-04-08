@@ -186,7 +186,7 @@ TH1D * normaliser::getNormalisedTH1D()const{
         out_res=getNormalised();
 
     TH1D * h = new TH1D("normalised","normalised", out_res.combined_.size(), 0 , out_res.combined_.size());
-    for(int i=0;i<out_res.combined_.size();i++){
+    for(int i=0;i<(int)out_res.combined_.size();i++){
         h->SetBinContent(i+1, out_res.combined_.at(i));
         h->SetBinError(i+1 , out_res.comberrup_.at(i));
     }
