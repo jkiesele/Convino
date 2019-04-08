@@ -5,6 +5,14 @@ Comments within the blocks have to begin with #.
 The input block lists the measurement files. For details, please see exampleMeasurement1.txt
 The other blocks are commented individually
 
+[global]
+ # this section defines whether the inputs should be treated as if they are a differential measurement.
+ # in particular, whether they should be normalised.
+ # the defaults are false
+    #isDifferential = false
+    #normalise = false
+[end global]
+
 [inputs]
 
     nFiles = 3

@@ -765,11 +765,11 @@ void measurement::setup(){
 	//all Lk_ here are symmetric by construction
 	for(size_t i=0;i<tildeC_.size();i++){
 		for(size_t j=0;j<tildeC_.size();j++){
-			long double estsum_ij=0;
+			double estsum_ij=0;
 			for(size_t mu=0;mu<x_.size();mu++){
 				for(size_t nu=0;nu<x_.size();nu++){
-					estsum_ij +=  (long double)((long double)M_.at(mu).at(nu)/2.) * //+kr_delta(mu,nu))) *
-							(long double)(Lk_.at(mu).at(i).symm()*Lk_.at(nu).at(j).symm() + Lk_.at(nu).at(i).symm()*Lk_.at(mu).at(j).symm());
+					estsum_ij +=  (double)((double)M_.at(mu).at(nu)/2.) * //+kr_delta(mu,nu))) *
+							(double)(Lk_.at(mu).at(i).symm()*Lk_.at(nu).at(j).symm() + Lk_.at(nu).at(i).symm()*Lk_.at(mu).at(j).symm());
 
 				}
 			}
@@ -855,7 +855,7 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 	// reasonable. For now it does not increase perf.
 	//df all set to zero before, only ADD here
 
-	long double xsqpart=0;
+	double xsqpart=0;
 	//x^2 part - symmetric
 	double combsum=0;
 	for(size_t mu=0;mu<nx;mu++){
@@ -919,25 +919,25 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 				x_comb_nu -= Lk_.at(nu).at(i).eval(lambda_i);
 			}
 
-			long double contribution = (x_meas_mu - x_comb_mu) * LM_.at(mu).at(nu) * (x_meas_nu - x_comb_nu);
+			double contribution = (x_meas_mu - x_comb_mu) * LM_.at(mu).at(nu) * (x_meas_nu - x_comb_nu);
 			if(pearson){
 				if(mu==nu){
-					contribution*= (long double)x_meas_nu/x_comb_nu;
+					contribution*= (double)x_meas_nu/x_comb_nu;
 				}
 				else{
-					contribution*= (long double)std::sqrt(x_meas_nu/x_comb_nu * x_meas_mu/x_comb_mu);
+					contribution*= (double)std::sqrt(x_meas_nu/x_comb_nu * x_meas_mu/x_comb_mu);
 				}
 			}
 
 
 			if(mu!=nu)
-				contribution*=(long double)2.;
+				contribution*=(double)2.;
 			xsqpart+=contribution;
 		}
 	}
 
 
-	long double copart=0;
+	double copart=0;
 	//lambda^2 - symmetric in lambda
 	for(size_t i=0;i<nlamb;i++){
 		double lambda_i = pars[lambdas_.at(i).getAsso()];
@@ -946,7 +946,7 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 
 			double lambda_j = pars[lambdas_.at(j).getAsso()];
 
-			long double contribution=lambda_i * lambda_j * LD_.at(i).at(j);
+			double contribution=lambda_i * lambda_j * LD_.at(i).at(j);
 
 			if(i!=j)
 				contribution*=2.;
