@@ -15,8 +15,7 @@
 
 
 void normaliser::setInput(const combinationResult& res){
-    //do some consistency checks here
-
+    //do some consistency checks here maybe TBI
 
     in_res_=res;
 }
@@ -42,22 +41,38 @@ void normaliser::setInput(const TH1D* h1d, const TH2D* h2d){
 combinationResult normaliser::getNormalised(double addUncertFraction, int bin)const{
     //set up inputs for normalised
 
-    auto cov = in_res_.getCombinedCovariance();
+    auto cov_in = in_res_.getCombinedCovariance();
     auto nominal = in_res_.getCombined();
-    auto nominal_normed = nominal;
-    //norm nominal ...
-    normaliseVector(nominal_normed);
-
     auto varied = nominal;
-
-    combinationResult out=in_res_;
+    double sum_nominal=0;
+    for(const auto& v:nominal)
+        sum_nominal+=v;
+    const size_t nbins = cov_in.size();
 
     multiGausGenerator gen(seed_);
-    gen.setCovariance(cov);
+    gen.setCovariance(cov_in);
+    double addbincontent=0;
 
-    const size_t nbins = cov.size();
+    std::vector<std::vector<double> > covfilled(cov_in.size(),std::vector<double>(nbins,0));
+    combinationResult out=in_res_;
 
-    std::vector<std::vector<double> > covfilled(cov.size(),std::vector<double>(nbins,0));
+    if(addbin_>=0){
+        //generate expectation value for this bin
+
+        for(size_t i=0;i<iterations_;i++){
+            double sum_varied=0;
+            auto vec = gen.generate();
+            for(size_t i=0;i<nbins;i++){
+                varied[i] = nominal[i] + vec[i];
+                sum_varied+=varied[i];
+            }
+            addbincontent += 1 - sum_varied;
+        }
+        addbincontent /= (double)iterations_;
+        covfilled.resize(cov_in.size()+1,std::vector<double>(nbins+1,0));
+        sum_nominal=1;
+    }
+
 
 
     for(size_t i=0;i<iterations_;i++){
@@ -69,20 +84,59 @@ combinationResult normaliser::getNormalised(double addUncertFraction, int bin)co
             varied[i] = nominal[i] + vec[i];
             sum_varied+=varied[i];
         }
+        double addbinthis = 1 - sum_varied;
+        if(addbin_>=0)
+            sum_varied=1;
+
         //fill cov and use norm, avoid additional loop / exploit symmetry
-        for(size_t i=0;i<nbins;i++){
-            double vari = varied[i]/sum_varied -  nominal_normed[i];
-            for(size_t j=0;j<=i;j++){
-                double varj = varied[j]/sum_varied -  nominal_normed[j];
+        size_t jcounter=0;
+        size_t icounter=0;
+        for(int i=0;i<(int)covfilled.size();i++){
+            jcounter=0;
+            double vari = varied[icounter]/sum_varied -  nominal[icounter]/sum_nominal;
+            if(i==addbin_)
+                vari = addbinthis - addbincontent;
+
+            for(int j=0;j<=i;j++){
+                double varj = varied[jcounter]/sum_varied -  nominal[jcounter]/sum_nominal;
+                if(j==addbin_)
+                    varj = addbinthis - addbincontent;
                 covfilled[i][j] += vari*varj;
+
+                if(j!=addbin_)
+                    jcounter++;
             }
+            if(i!=addbin_)
+                icounter++;
         }
 
     }
+    double sum_all = 0;
+    for(const auto& v:nominal)
+        sum_all+=v;
+    sum_all+=addbincontent;
 
 
-    triangularMatrix newcov = cov;
-    for(size_t i=0;i<nbins;i++){
+
+    triangularMatrix newcov = cov_in;
+    if(addbin_>=0){
+        auto names = cov_in.createNamesVector();
+        std::vector<TString> newnames(names.size()+1);
+        int counter=0;
+        for(int i=0;i<newnames.size();i++){
+            if(addbin_!=i){
+                newnames.at(i) = names.at(counter);
+                counter++;
+            }
+            else{
+                newnames.at(i) = addbin_name;
+            }
+        }
+        newcov = triangularMatrix(newnames);
+    }
+
+
+    for(size_t i=0;i<covfilled.size();i++){
         for(size_t j=0;j<=i;j++){
             if((int)i==bin && (int)j==bin)
                 newcov.setEntry(i,j, covfilled[i][j]*(1.+addUncertFraction) / (double)iterations_);
@@ -91,17 +145,31 @@ combinationResult normaliser::getNormalised(double addUncertFraction, int bin)co
         }
     }
 
+
+    std::vector<double> normed(newcov.size());
+    int counter=0;
+    for(int i=0;i<normed.size();i++){
+        if(addbin_!=i){
+            normed.at(i) = nominal.at(counter)/sum_all;
+            counter++;
+        }
+        else{
+            normed.at(i) = addbincontent/sum_all;
+        }
+    }
+
     auto correlationm = newcov;
     correlationm.normalize();
     //exploit cov symmetry
     out.post_meas_covariance_=newcov;
     out.post_meas_correlations_ = correlationm;
-    out.combined_ = nominal_normed;
+    out.combined_ = normed;
     if(out.comberrup_.size()<newcov.size())
         out.comberrup_.resize(newcov.size());
     for(size_t i=0;i<newcov.size();i++)
         out.comberrup_.at(i) = std::sqrt(newcov.getEntry(i,i));
     out.comberrdown_=out.comberrup_;
+    out.combnames_ = newcov.createNamesVector();
     out.post_all_correlations_.clear();//
     out.post_sys_correlations_.clear();
     out.constraints_.clear();

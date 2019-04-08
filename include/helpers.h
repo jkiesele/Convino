@@ -21,6 +21,11 @@
  * <bin> number is c++ like (starting at 0) not root like!
  */
 TH2D removeOneBin(const TH2D& in, int bin);
+/**
+ * no overflow underflow
+ * <bin> number is c++ like (starting at 0) not root like!
+ */
+TH1D removeOneBin(const TH1D& in, int bin);
 
 inline double kr_delta(const size_t& i, const size_t& j){
 	if(i==j)return 1.;

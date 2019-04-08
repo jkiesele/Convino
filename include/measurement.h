@@ -216,13 +216,11 @@ public:
 	    isDifferential_=isdiff;
 	}
 
-	void setIsNormalisedInput(bool isn){
-	    isnormalisedinput_=isn;
-	}
+	void setIsNormalisedInput(bool isn);
 
-	bool isNormalisedInput()const{
-	    return isnormalisedinput_;
-	}
+	bool isNormalisedInput()const;
+
+	void setNormalise(bool norm);
 
 	/////// interface to combined class. Should not be used by the user ///////
 
@@ -287,6 +285,10 @@ private:
 	bool isDifferential_;
     int excludebin_; //just bookkeeping
     bool isnormalisedinput_;
+
+    double normalisation_;
+    bool normalise_;
+
     TString excludedestname_;
     bool bypass_logic_check_;
     size_t this_obj_counter_;

@@ -46,28 +46,18 @@ int main(){
 
 
     TH1D histo_meas1=createPseudoMeasurement("histo_meas1",1000);
-    histo_meas1.Scale(1./1000.);
+    histo_meas1.Scale(1./100.);
     // TH1D syshisto_meas1=createSystematicVariation(histo_meas1,1.2,"syshisto_meas1");
-    TH2D cov_1 = createCovarianceMatrix(histo_meas1,0.2);
+    TH2D cov_1 = createCovarianceMatrix(histo_meas1,0.1);
 
     // create a second measurement
     TH1D histo_meas2=createPseudoMeasurement("histo_meas2",1100);
-    histo_meas2.Scale(1./1100.);
+    histo_meas2.Scale(1./110.);
     // TH1D syshisto_meas2=createSystematicVariation(histo_meas2,1.5,"syshisto_meas2");
-    TH2D cov_2 = createCovarianceMatrix(histo_meas2,1.);
+    TH2D cov_2 = createCovarianceMatrix(histo_meas2,0.1);
 
 
-    triangularMatrix ma(nbins);
-    ma.fillFromTH2(cov_2);
 
-    std::cout << ma << std::endl;
-
-    auto ma2 = ma.createHessianFromCovariance();
-
-    ma.invert();
-
-    std::cout << ma << std::endl;
-    std::cout << ma2 << std::endl;
 
 
    // return 1;
@@ -79,8 +69,10 @@ int main(){
     measurement m1;
    // m1.setExcludeBin(1);
     m1.setMeasured(&histo_meas1);
+
    // m1.setIsNormalisedInput(true);
-    // m1.setEstimateCovariance(cov_1);
+    m1.setEstimateCovariance(cov_1);
+    m1.addSystematics("scalesys1",1.1);
     comb.addMeasurement(m1);
 
 
@@ -88,7 +80,8 @@ int main(){
   //  m2.setExcludeBin(1);
     m2.setMeasured(&histo_meas2);
   //  m2.setIsNormalisedInput(true);
-    //  m1.setEstimateCovariance(cov_2);
+    m2.setEstimateCovariance(cov_2);
+    m2.addSystematics("scalesys2",1.1);
     comb.addMeasurement(m2);
 
 
@@ -100,9 +93,11 @@ int main(){
     std::cout << ">>>>>>>>>>>>>>> normalise.." << std::endl;
 
     normaliser norm;
+    //norm.setIterations(1e8);
     norm.setInput(comb_result);
     auto normres = norm.getNormalised();
     normres.printFullInfo(std::cout);
+   // norm.setIterations(1e6);
 
     std::cout << ">>>>>>>>>>>>>>>>>>normalise first" << std::endl;
 
@@ -112,25 +107,41 @@ int main(){
     TH1D histo_meas1_norm = *norm.getNormalisedTH1D();
     TH2D cov_1_norm = *norm.getNormalisedCovarianceTH2D(0.2,2);
 
+    std::cout << ">>>>>meas1 normed" << std::endl;
     norm.getNormalised().printFullInfo(std::cout);
 
+    norm.clear();
     norm.setInput(&histo_meas2,&cov_2);
     TH1D histo_meas2_norm = *norm.getNormalisedTH1D();
     TH2D cov_2_norm = *norm.getNormalisedCovarianceTH2D(0.2,2);
 
 
-    norm.getNormalised().printFullInfo(std::cout);
+    std::cout << ">>>>>meas2 normed" << std::endl;
+  //  norm.getNormalised().printFullInfo(std::cout);
+
+
+    std::cout << ">>>>>>>>>>>>>>>>>>remove a bin" << std::endl;
+
+    int removebin=0;
+
+    histo_meas1_norm = removeOneBin(histo_meas1_norm,removebin);
+    cov_1_norm = removeOneBin(cov_1_norm,removebin);
+    histo_meas2_norm = removeOneBin(histo_meas2_norm,removebin);
+    cov_2_norm = removeOneBin(cov_2_norm,removebin);
+
 
 
     std::cout << ">>>>>>>>>>>>>>>>>>adding to combiner" << std::endl;
 
     combiner comb_norm;
-    comb_norm.setExcludeBin(0);
+    //combiner::debug=true;
+
     // measurement::debug=true;
     measurement m1_norm;
    //  m1_norm.setExcludeBin(1);
     m1_norm.setMeasured(&histo_meas1_norm);
     m1_norm.setEstimateCovariance(cov_1_norm);
+    m1_norm.addSystematics("scalesys",1.1);
    // m1_norm.setIsNormalisedInput(true);
     comb_norm.addMeasurement(m1_norm);
 
@@ -144,14 +155,17 @@ int main(){
 
     combinationResult comb_result_norm=comb_norm.combine();
 
-    comb_result_norm.printFullInfo(std::cout);
+   // comb_result_norm.printFullInfo(std::cout);
 
 
-    std::cout << ">>>>>>>>>>>>>>>>>>normalise again" << std::endl;
+    std::cout << ">>>>>>>>>>>>>>>>>>normalise again, addbin bin back" << std::endl;
 
     norm.clear();
+    norm.addFloatingBin(removebin,"added");
     norm.setInput(comb_result_norm);
     norm.getNormalised().printFullInfo(std::cout);
+
+
 
 
 }

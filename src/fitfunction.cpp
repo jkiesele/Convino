@@ -41,9 +41,11 @@ void fitfunctionBase::eval(const double*x, double& f, double* df)const{
 	    throw std::out_of_range("fitfunctionBase::eval: No measurements associated");
 
 
+	//this part needs more care, make it  iterative  use augmented Lagrangian method
+	//mu and lambda parameters will be part of combiner.
 	if(meass.at(0).getExcludeBin()>=0){
-	    double combsum = meass.at(0).getCombSum(x);
-	    f_int+= 1e6*(1 - combsum)*(1 - combsum);
+	    double combsumdiff = 1. - meass.at(0).getCombSum(x);
+	    f_int+= c->auglagrangemu_/2. * combsumdiff * combsumdiff  - c->auglagrangelambda_ * combsumdiff ;
 	}
 	const size_t nsys=c->npars_-c->nest_;
 
@@ -57,7 +59,7 @@ void fitfunctionBase::eval(const double*x, double& f, double* df)const{
 	for(size_t i=0;i<nsys;i++){
 		double pi=x[i];
 
-		if(c->allsysparas_.at(i).getType() == parameter::para_unc_lognormal){
+		if(c->allsysparas_.at(i).getType() == parameter::para_unc_lognormal){//this is switched off for now
 			if(x[i]>-1)
 				pi = std::log(1 + x[i]); //this needs some re-work and transofrmation before, TBI
 			else

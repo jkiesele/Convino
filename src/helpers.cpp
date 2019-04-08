@@ -34,3 +34,18 @@ TH2D removeOneBin(const TH2D& in, int bin){
     return h;
 
 }
+
+TH1D removeOneBin(const TH1D& in, int bin){
+    if(bin<0)return in;
+    TH1D h = TH1D(in.GetName()+(TString)"_rem",
+            in.GetTitle()+(TString)"_rem",
+            in.GetNbinsX()-1,0,in.GetNbinsX());
+
+    int counteri=1;
+    for(int i=1;i<=in.GetNbinsX();i++){
+        if(i == bin+1)continue;
+        h.SetBinContent(counteri,in.GetBinContent(i));
+        counteri++;
+    }
+    return h;
+}

@@ -122,7 +122,7 @@ void combiner::readConfigFile(const std::string & filename){
     fr.readFile(configfile_);
     fr.setRequireValues(false);
     isdifferential_ = fr.getValue<bool>("isDifferential",false);
-    normalise_ = fr.getValue<bool>("normalise",false);
+    normaliseinfit_ = fr.getValue<bool>("normalise",false);
     normalised_input_ = fr.getValue<bool>("normalisedInput",false);
 
 
@@ -276,9 +276,7 @@ void combiner::addMeasurement( measurement m){
 }
 
 void combiner::checkConsistency()const{
-    if(isdifferential_ && excludebin_>=0 && normalise_)
-        throw std::logic_error("Trying to exclude a bin without normalisation constraint on result will never converge.");
-    if(!isdifferential_ && (excludebin_>=0 || normalise_))
+    if(!isdifferential_ && (excludebin_>=0 || normaliseinfit_))
         throw std::logic_error("Input marked as not differential but trying to exclude a bin or applying norm constraint. Please check consistency of input configuration");
     if(!isdifferential_ && normalised_input_)
         throw std::logic_error("Input marked as not differential but as normalised. Please check consistency of input configuration");
@@ -727,7 +725,8 @@ combinationResult combiner::combinePriv(){
     fitter.setParameterNames(names);
     fitfunctionGradient func(this);
     fitter.setMinFunction(func);
-
+    const size_t nsyst=nsys;
+    const size_t ncomb=fitter.getParameters()->size()-nsyst ;
     if(debug)
         simpleFitter::printlevel=2;
 
@@ -740,6 +739,47 @@ combinationResult combiner::combinePriv(){
     /*
      * Configure Minuit parameters and fit
      */
+
+    // iterative increase of auglagrangemu_,auglagrangelambda_
+    // until measurements_.at(0).getCombSum(&fitter.getParameters()->at(0)) + delta; is close enough to 1.
+
+    if(normaliseinfit_ &&excludebin_>=0){
+        auglagrangemu_=1;
+        auglagrangelambda_=1;
+        double sumdiff = 1;
+        double sumerr = 0;
+        while (fabs(sumdiff)+sumerr > 0.0001){
+            //loop while with exit condition of n calls || fabs(sumdiff) < 0.001 or something of that order:
+
+            //  fit
+            //  feed back starting paras
+            //  set lambda and mu up using  sumdiff
+            fitter.fit();
+            fitter.feedErrorsToSteps();
+            sumerr = 0;
+            for(size_t i=0;i<ncomb;i++){ //error on sum is 1^T cov 1
+                size_t fi=nsyst+i;
+                auto comberri = fitter.getParameterErr(fi);
+                for(size_t j=0;j<=i;j++){
+                    size_t fj=nsyst+j;
+                    auto corr = fitter.getCorrelationCoefficient(fi,fj);
+                    auto comberrj = fitter.getParameterErr(fj);
+                    if(i==j)
+                        sumerr += comberri*comberrj*corr;
+                    else
+                        sumerr += 2.*comberri*comberrj*corr;
+                }
+            }
+            sumerr = std::sqrt(sumerr);
+            sumdiff = 1. - measurements_.at(0).getCombSum(&fitter.getParameters()->at(0));
+            // sumerr = 1^T cov 1 , cov only from results
+            auglagrangelambda_ = auglagrangemu_*sumdiff;
+            auglagrangemu_ *= 3.;
+        }
+        //loop end
+    }
+
+
     fitter.setStrategy(2);
     fitter.setTolerance(0.1);
     fitter.fit();
@@ -751,8 +791,7 @@ combinationResult combiner::combinePriv(){
      *********  Save the results
      */
 
-    const size_t nsyst=nsys;
-    const size_t ncomb=fitter.getParameters()->size()-nsyst ;
+
     std::vector<TString> combnames;
     for(size_t i=0;i<ncomb;i++){
         size_t idx=nsyst+i;
@@ -834,7 +873,7 @@ combinationResult combiner::combinePriv(){
     out.hasOF_=hasOF_;
     out.excludebin_ = excludebin_;
 
-    if(normalise_ && false){
+    if(normalisewithtoys_){
         normaliser normer;
         normer.setInput(out);
         out=normer.getNormalised();
@@ -852,6 +891,7 @@ void combiner::setSystCorrelation(const TString & namea, const TString& nameb, c
     size_t idxb=external_correlations_.getEntryIndex(nameb);
     setSystCorrelation(idxa,idxb,coeff);
 }
+
 void combiner::setSystCorrelation(const size_t & idxa, const size_t& idxb, const double& coeff){
     double usecoeff=coeff;
     if(usecoeff>maxcorr_)usecoeff=maxcorr_;
@@ -859,7 +899,10 @@ void combiner::setSystCorrelation(const size_t & idxa, const size_t& idxb, const
     external_correlations_.setEntry(idxa,idxb, usecoeff);
 }
 
-
+void combiner::setExcludeBin(int bin){
+    std::cout << ("combiner::setExcludeBin: WARNING not validated yet") << std::endl;
+    excludebin_=bin;
+}
 
 void combiner::clear(){
     external_correlations_.clear();

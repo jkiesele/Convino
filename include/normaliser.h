@@ -15,7 +15,7 @@ class TH2D;
 class normaliser{
 public:
 
-    normaliser():iterations_(1e6),seed_(0),excludedbin_(-1){}
+    normaliser():iterations_(1e6),seed_(0),addbin_(-1){}
 
     void setInput(const combinationResult& res);
     void setInput(const TH1D* , const TH2D* );
@@ -27,12 +27,16 @@ public:
     void setSeed(int seed){
         seed_=seed;
     }
-    void setExcludedBin(int bin){
-        excludedbin_=bin;
-    }
 
     void clear(){
         out_res = combinationResult();
+    }
+
+    void addFloatingBin(int number, const TString& name=""){
+        addbin_ = number;
+        addbin_name = name;
+        if(name.Length()<1)
+            addbin_name="add_bin";
     }
 
     combinationResult getNormalised(double addUncertFraction=0., int bin=-1)const;
@@ -48,7 +52,8 @@ private:
     int seed_;
     combinationResult in_res_;
     mutable combinationResult out_res;
-    int excludedbin_;
+    int addbin_;
+    TString addbin_name;
 };
 
 

@@ -38,7 +38,8 @@ public:
     lowestchi2_(1e19),isdifferential_(false),hasUF_(false),hasOF_(false),
     normalised_input_(false),
     excludebin_(-1),
-    normalise_(false){}
+    normaliseinfit_(false),normalisewithtoys_(false),
+    auglagrangemu_(1),auglagrangelambda_(1){}
     ~combiner(){clear();}
     enum lh_mod{lh_mod_neyman,lh_mod_pearson};
 
@@ -81,9 +82,7 @@ public:
      */
     void setSystCorrelation(const size_t & idxa, const size_t& idxb, const double& coeff);
 
-    void setExcludeBin(int bin){
-        excludebin_=bin;
-    }
+    void setExcludeBin(int bin);
 
     int getExcludeBin()const{
         return excludebin_;
@@ -110,6 +109,13 @@ public:
     void associate(const TString & a, const TString& outname);
 
     static bool debug;
+
+    void setNormaliseInFit(bool normit){
+        normaliseinfit_=normit;
+    }
+    void setNormaliseWithToys(bool normit){
+        normalisewithtoys_=normit;
+    }
 
     bool isNormalisedDifferentialInput()const{
         return isdifferential_ && normalised_input_;
@@ -231,11 +237,14 @@ private:
 
     bool isdifferential_,hasUF_,hasOF_, normalised_input_;
     int excludebin_;
-    bool normalise_;
+    bool normaliseinfit_,normalisewithtoys_;
 
     static const double maxcorr_;
 
     static bool dummyrun_;//< for debugging purposes
+
+
+    double auglagrangemu_,auglagrangelambda_;
 
 };
 

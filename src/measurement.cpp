@@ -23,7 +23,9 @@ bool measurement::removeexcludebin=false;
 
 measurement::measurement():setup_(false),hasUF_(false), hasOF_(false),isDifferential_(false),
         excludebin_(-1),
-        isnormalisedinput_(false), //FIXME not used really, is replaced by excludebin_>=0
+        isnormalisedinput_(false),
+        normalisation_(-1),
+        normalise_(false),
         bypass_logic_check_(false){
     this_obj_counter_=nobjects_;
 	nobjects_++;
@@ -547,8 +549,10 @@ void measurement::setParameterValue(const TString & name, const double& val){
 
 
 void measurement::setExcludeBin(int bin){
-    if(false && paras_.size()) //FIXME
-        throw std::out_of_range("measurement::setExcludeBin: exclude bin needs to be set before any input is read");
+    if(bin>=0){
+      //  throw std::runtime_error("measurement::setExcludeBin: not validated yet!");
+        std::cout << "measurement::setIsNormalisedInput: WARNING: experimental implementation" <<std::endl;
+    }
     excludebin_=bin;
 }
 
@@ -571,7 +575,19 @@ int measurement::getLeastSignificantBin()const{
     return lowestsign;
 
 }
+void measurement::setIsNormalisedInput(bool isn){
+    std::cout << "measurement::setIsNormalisedInput: WARNING: experimental implementation" <<std::endl;
+    isnormalisedinput_=isn;
+}
 
+bool measurement::isNormalisedInput()const{
+    return isnormalisedinput_;
+}
+
+void measurement::setNormalise(bool norm){
+    std::cout << "measurement::setIsNormalisedInput: WARNING: experimental implementation" <<std::endl;
+    normalise_=norm;
+}
 
 ////////// Interface to combiner ////////
 
@@ -845,7 +861,10 @@ void measurement::setup(){
 	hinv.invert();
 
 
-
+	normalisation_=0;
+	for(const auto& p:x_){
+	    normalisation_+=p.getNominalVal();
+	}
     //debug
 
 	//DEBUG
@@ -885,19 +904,29 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 	//x^2 part - symmetric
 	double combsum=0;
 	for(size_t mu=0;mu<nx;mu++){
-	    if((int)mu!=excludebin_)
-	        combsum += pars[x_.at(mu).getAsso()];
+	    if(excludebin_ == (int) mu) continue;
+	    combsum += pars[x_.at(mu).getAsso()];
 	}
-	double rest_norm_comb = 1 - combsum;
+	//double rest_norm_comb = 1 - combsum;
 
+	if(normalise_){
+	    //calculate addition to scaler?... TBI
+	    //and apply scaler to x_comb_mu/nu
+	}
 
 	for(size_t mu=0;mu<nx;mu++){
 
 
 		double x_comb_mu = pars[x_.at(mu).getAsso()];
-		if(excludebin_ == (int) mu)
+		/*
+		if(excludebin_ == (int) mu){
+		    if(isnormalisedinput_)
+		        continue;
 		    x_comb_mu=rest_norm_comb;
-
+		}
+        if(normalise_)
+            x_comb_mu*=normalisation_;
+		 */
 		double x_meas_mu = x_.at(mu).getNominalVal();
 
 		for(size_t i=0;i<nlamb;i++){
@@ -913,13 +942,18 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 
 		for(size_t nu=mu;nu<nx;nu++){
 
-
 			double x_comb_nu = pars[x_.at(nu).getAsso()];
 			double x_meas_nu = x_.at(nu).getNominalVal();
 
-	        if(excludebin_ == (int) nu)
+			/*
+	        if(excludebin_ == (int) nu){
+	            if(isnormalisedinput_)
+	                continue;
 	            x_comb_nu=rest_norm_comb;
-
+	        }
+	        if(normalise_)
+	            x_comb_nu*=normalisation_;
+			 */
 			for(size_t i=0;i<nlamb;i++){
 				if(! lambdas_.at(i).isRelative()) continue;
 				double lambda_i = pars[lambdas_.at(i).getAsso()];
@@ -995,6 +1029,8 @@ double measurement::getCombSum(const double * pars)const{
     }
     return combsum;
 }
+
+
 
 /////////// privates //////////
 
