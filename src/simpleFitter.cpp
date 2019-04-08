@@ -256,6 +256,7 @@ void simpleFitter::fit(){
 
     if(printlevel>0)
         std::cout << "simpleFitter::fit(): minimisation done, errors done, filling info" << std::endl;
+
 	chi2min_=pminimizer_->MinValue();
 	std::vector<double> dummy;
 	dummy.resize(paras_.size(),0);
