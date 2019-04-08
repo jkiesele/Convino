@@ -540,11 +540,11 @@ std::ostream& operator<<(std::ostream& os, const triangularMatrix& m)
     while(delta && delta*scaler < 1)scaler*=10;
     while(delta && delta*scaler > 10)scaler*=0.1;
 
-    if(scaler <= 0.01 || scaler >= 100)
-        os << "multiplied by: " << scaler <<'\n';
-    else
-        scaler=1;
-	std::streamsize save=os.width();
+    if(scaler <= 0.01 || scaler >= 100){
+        os << "multiplied by: " << scaler <<'\n';}
+    else{
+        scaler=1;}
+    std::streamsize save=os.width();
 	os.width(4);
 	size_t maxnamewidth=0;
 	for(size_t i=0;i<m.size();i++){

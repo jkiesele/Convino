@@ -123,7 +123,7 @@ combinationResult normaliser::getNormalised(double addUncertFraction, int bin)co
         auto names = cov_in.createNamesVector();
         std::vector<TString> newnames(names.size()+1);
         int counter=0;
-        for(int i=0;i<newnames.size();i++){
+        for(int i=0;i<(int)newnames.size();i++){
             if(addbin_!=i){
                 newnames.at(i) = names.at(counter);
                 counter++;
@@ -148,7 +148,7 @@ combinationResult normaliser::getNormalised(double addUncertFraction, int bin)co
 
     std::vector<double> normed(newcov.size());
     int counter=0;
-    for(int i=0;i<normed.size();i++){
+    for(int i=0;i<(int)normed.size();i++){
         if(addbin_!=i){
             normed.at(i) = nominal.at(counter)/sum_all;
             counter++;
@@ -186,7 +186,7 @@ TH1D * normaliser::getNormalisedTH1D()const{
         out_res=getNormalised();
 
     TH1D * h = new TH1D("normalised","normalised", out_res.combined_.size(), 0 , out_res.combined_.size());
-    for(int i=0;i<out_res.combined_.size();i++){
+    for(int i=0;i<(int)out_res.combined_.size();i++){
         h->SetBinContent(i+1, out_res.combined_.at(i));
         h->SetBinError(i+1 , out_res.comberrup_.at(i));
     }
@@ -199,8 +199,8 @@ TH2D * normaliser::getNormalisedCovarianceTH2D(double addUncertFraction, int bin
 
     TH2D * h = new TH2D("normalised_covariance","normalised_covariance", out_res.combined_.size(), 0 , out_res.combined_.size(),
              out_res.combined_.size(), 0 , out_res.combined_.size());
-    for(int i=0;i<out_res.combined_.size();i++){
-        for(int j=0;j<out_res.combined_.size();j++){
+    for(int i=0;i<(int)out_res.combined_.size();i++){
+        for(int j=0;j<(int)out_res.combined_.size();j++){
             h->SetBinContent(i+1,j+1,  out_res.post_meas_covariance_.getEntry(i,j));
             h->SetBinError(i+1 , j+1,  out_res.post_meas_covariance_.getEntry(i,j));
         }
