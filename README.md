@@ -4,7 +4,10 @@ The Convino program allows combining sets of differential or inclusive measureme
 For a description of the method and the program, see [1]. Please also cite this document if this tool is used.
 New features with respect to the ones described in the published paper are described in the file documentation.pdf, wich is provided in this repository.
 
-The source code can be compiled with gcc, supporting C++11 standard. It depends on ROOT6 [https://root.cern.ch/]. 
+The source code can be compiled with gcc, supporting C++11 standard. It depends on ROOT6 [https://root.cern.ch/].
+
+It is also installed on lxplus6 at CERN in
+``/afs/cern.ch/user/j/jkiesele/public/Convino/latest``
 For compiling and running on cern lxplus, please source the lxplus_env.sh script.
 
 
