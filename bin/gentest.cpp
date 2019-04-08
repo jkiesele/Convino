@@ -17,7 +17,7 @@
 int nbins=5;
 
 triangularMatrix createCovarianceMatrix(const TH1D& nominal, double correlation_strength);
-TH1D createPseudoMeasurement(TString name, bool withUFOF, int statistics, bool normalise, bool flat);
+TH1D createPseudoMeasurement(TString name, bool withUFOF, int statistics, bool normalise=false, bool flat=false);
 
 
 std::ostream& operator<<(std::ostream& os, const std::vector<double>& m);

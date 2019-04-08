@@ -24,14 +24,13 @@ void coutHelp(){
     std::cout << "                  Options: cov(ariance) (default, will be converted to hessian),\n";
     std::cout << "                  hes(sian), cor(relation) matrix\n";
     std::cout << "\n-p              measurement prefix name (will be added to \"binX\")";
-    std::cout << "\n--noufof        do not consider under and overflow bins";
 
     std::cout << std::endl;
     std::cout << "EXAMPLE: root_to_matrix  -o cov my_file.root my_histo_2d" <<std::endl;
     std::cout << std::endl;
 }
 
-TString extractMatrix(const TString& file, const TString& histo, TString prefix, bool ignoreufof, bool convertcovtohes){
+TString extractMatrix(const TString& file, const TString& histo, TString prefix , bool convertcovtohes){
 
     TFile f(file);
     auto* o=f.Get(histo);
@@ -53,18 +52,9 @@ TString extractMatrix(const TString& file, const TString& histo, TString prefix,
         exit(-1);
     }
     TString output="";
-    int maxbin=xbins+2;
-    int minbin=0;
+    int maxbin=xbins+1;
+    int minbin=1;
 
-    if(!ignoreufof && ! h->GetBinContent(0,0)){
-        std::cout << "histogram does not contain any underflow bin, please run with --noufof\n";
-        std::cout << "also, please notice that migrations out of the phase space cannot be taken into account this way."<<std::endl;
-        exit(-1);
-    }
-    if(ignoreufof){
-        maxbin--;
-        minbin++;
-    }
 
     if(!convertcovtohes){
 
@@ -131,14 +121,10 @@ int main(int argc, char* argv[]){
     TString prefix="";
     std::vector<TString> opts;
 
-    bool ignoreufof=false;
 
     for(int i=1;i<argc;i++){
         TString targv=argv[i];
-        if(targv == "--noufof"){
-            ignoreufof=true;
-        }
-        else if(targv.BeginsWith("-")){
+        if(targv.BeginsWith("-")){
 
             if(targv.Contains("h")){
                 coutHelp();
@@ -192,7 +178,7 @@ int main(int argc, char* argv[]){
     TString all ="[";
     all+=outputname;
     all+="]\n\n";
-    all += extractMatrix(opts.at(0),opts.at(1),prefix,ignoreufof,convertcovtohes);
+    all += extractMatrix(opts.at(0),opts.at(1),prefix,convertcovtohes);
     all+="\n";
     all+="[end ";
     all+=outputname;

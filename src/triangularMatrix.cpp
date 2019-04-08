@@ -369,14 +369,11 @@ void triangularMatrix::importTMatrix(const TMatrixD& in){
 
 }
 
-void triangularMatrix::fillFromTH2(const TH2D& h, bool includeufof){
+void triangularMatrix::fillFromTH2(const TH2D& h){
     if(h.GetNbinsX() != h.GetNbinsY())
         throw std::out_of_range("triangularMatrix::fillFromTH2: input not symmetric");
     size_t start=1,end=h.GetNbinsX()+1;
-    if(includeufof){
-        start=0;
-        end++;
-    }
+
     if(end-start != size())
         throw std::out_of_range(((TString)"triangularMatrix::fillFromTH2: input size "+ (end-start) + (TString)" does not match matrix size "+
                 size()).Data());

@@ -100,7 +100,6 @@ void combiner::addMeasurement(const std::string& infile){
     if(debug)
         std::cout << "combiner::addMeasurement" <<std::endl;
     measurement m;
-    m.setExcludeBin(excludebin_);
     m.readFromFile(infile);
     m.setIsDifferential(isdifferential_);
 
@@ -122,9 +121,11 @@ void combiner::readConfigFile(const std::string & filename){
     fr.readFile(configfile_);
     fr.setRequireValues(false);
     isdifferential_ = fr.getValue<bool>("isDifferential",false);
-    normaliseinfit_ = fr.getValue<bool>("normalise",false);
+    normalisewithtoys_ = fr.getValue<bool>("normalise",false);
+    normaliseinfit_=false; //to be validated/extended TBI
     normalised_input_ = fr.getValue<bool>("normalisedInput",false);
-
+    if(normalised_input_)
+        throw std::runtime_error("combiner::readConfigFile: normalisedInput not yet implemented for text interface");
 
     fr.setRequireValues(true);
     fr.setStartMarker("[inputs]");
@@ -245,19 +246,13 @@ void combiner::readConfigFile(const std::string & filename){
 }
 
 void combiner::addMeasurement( measurement m){
-    m.setExcludeBin(excludebin_);
     m.setup();
     if(measurements_.size()<1){
         isdifferential_=m.isDifferential();
-        if(isdifferential_){
-            hasUF_=m.hasUF();
-            hasOF_=m.hasOF();
-        }
+
     }
     else{
-        if(isdifferential_ != m.isDifferential()
-                || (isdifferential_&& hasUF_!=m.hasUF())
-                || (isdifferential_&& hasOF_!=m.hasOF()))
+        if(isdifferential_ != m.isDifferential())
             throw std::logic_error("combiner::addMeasurement: cannot combine measurements using root interface with measurements not using the root interface");
     }
     //check for ambiguities
@@ -704,10 +699,6 @@ combinationResult combiner::combinePriv(){
     }
 
 
-    if(excludebin_ >= 0){
-        for(auto & m: measurements_)
-            m.setExcludeBin(excludebin_);
-    }
 
     /*
      *********   Configure the fitter and do the fit
@@ -743,7 +734,7 @@ combinationResult combiner::combinePriv(){
     // iterative increase of auglagrangemu_,auglagrangelambda_
     // until measurements_.at(0).getCombSum(&fitter.getParameters()->at(0)) + delta; is close enough to 1.
 
-    if(normaliseinfit_ &&excludebin_>=0){
+    if(normaliseinfit_){
         auglagrangemu_=1;
         auglagrangelambda_=1;
         double sumdiff = 1;
@@ -780,6 +771,8 @@ combinationResult combiner::combinePriv(){
     }
 
 
+    fitter.fit();
+    fitter.feedErrorsToSteps();
     fitter.setStrategy(2);
     fitter.setTolerance(0.1);
     fitter.fit();
@@ -869,8 +862,7 @@ combinationResult combiner::combinePriv(){
             }
         }
     }
-    out.hasUF_=hasUF_;
-    out.hasOF_=hasOF_;
+
     out.excludebin_ = excludebin_;
 
     if(normalisewithtoys_){

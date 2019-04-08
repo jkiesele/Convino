@@ -43,10 +43,10 @@ void fitfunctionBase::eval(const double*x, double& f, double* df)const{
 
 	//this part needs more care, make it  iterative  use augmented Lagrangian method
 	//mu and lambda parameters will be part of combiner.
-	if(meass.at(0).getExcludeBin()>=0){
-	    double combsumdiff = 1. - meass.at(0).getCombSum(x);
-	    f_int+= c->auglagrangemu_/2. * combsumdiff * combsumdiff  - c->auglagrangelambda_ * combsumdiff ;
-	}
+	//if(meass.at(0).getExcludeBin()>=0){
+	//    double combsumdiff = 1. - meass.at(0).getCombSum(x);
+	//    f_int+= c->auglagrangemu_/2. * combsumdiff * combsumdiff  - c->auglagrangelambda_ * combsumdiff ;
+	//}
 	const size_t nsys=c->npars_-c->nest_;
 
 	const double sqrt2 = std::sqrt(2);

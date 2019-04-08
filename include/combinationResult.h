@@ -74,7 +74,7 @@ public:
 	 * The advantage of a TGraphAsymmErrors is that asymmetric uncertainties
 	 * are properly displayed.
 	 */
-	void fillTGraphAsymmErrors(TGraphAsymmErrors*&, bool cutUFOF=false)const;
+	void fillTGraphAsymmErrors(TGraphAsymmErrors*&)const;
 
 	/**
 	 * Returns the minimum of the combination likelihood
@@ -201,7 +201,7 @@ protected:
 	std::vector<double> pulls_;
 	std::vector<double> constraints_;
 	double chi2min_;
-	bool isdifferential_,hasUF_,hasOF_;
+	bool isdifferential_;
 	int excludebin_;
 
 	void copyFrom(const combinationResult& r);

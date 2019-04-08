@@ -42,8 +42,8 @@ public:
 	void toTMatrix(TMatrixD& out)const;
 	void importTMatrix(const TMatrixD& in);
 
-	void fillFromTH2(const TH2D&, bool includeufof=false);
-    void createFromTH2(const TH2D&, bool includeufof=false);
+	void fillFromTH2(const TH2D&);
+    void createFromTH2(const TH2D&);
 
 	const size_t& size()const{return names_.size();}
 

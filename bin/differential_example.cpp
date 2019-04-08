@@ -17,13 +17,12 @@
  */
 
 
-// The following functions are only helpers to create data for pseudo measurements.
-// in reality, this would be the input from the measurements
-
+/*
+ * Helper functions to generate the pseudo measurements
+ */
 const int nbins = 5;
 
-TH1D createPseudoMeasurement( TString name, bool withUFOF, int statistics, bool normalise=false);
-TH1D createPseudoMeasurementFlat( TString name, bool withUFOF, int statistics, bool normalise=false);
+TH1D createPseudoMeasurement( TString name, int statistics, bool normalise=false);
 TH1D createSystematicVariation(const TH1D& nominal, double scale, TString name);
 TH2D createCovarianceMatrix(const TH1D& nominal, double correlation_strength);
 
@@ -34,138 +33,106 @@ int main(){
      */
 
     TFile f("differentialExample.root","RECREATE");
+    TH1::SetDefaultSumw2(true);
 
 
     /*
      * Create some pseudo measurements and a correlation matrix
      */
-
-    TH1::SetDefaultSumw2(true);
-
-    const bool withUFOF=false; //this is not fully validated, yet!
-
-    const bool normalise_input=false;
-
-    const bool flat=false;
-
-    TH1D histo_meas1=createPseudoMeasurement("histo_meas1",withUFOF,1000,normalise_input);
-    if(flat)
-         histo_meas1=createPseudoMeasurementFlat("histo_meas1",withUFOF,200,normalise_input);
+    TH1D histo_meas1=createPseudoMeasurement("histo_meas1",1000);
     histo_meas1.Write(); //just for bookkeeping
 
     /*
-     * create a pseudo systematic variation
+     * create a systematic variation
      */
     TH1D syshisto_meas1=createSystematicVariation(histo_meas1,1.2,"syshisto_meas1");
     syshisto_meas1.Write(); //just for bookkeeping
 
-
     /*
      * Create a covariance
      */
-
     TH2D cov_1 = createCovarianceMatrix(histo_meas1,0.02);
     cov_1.Write(); //just for bookkeeping
 
 
 
     // create a second measurement
-    TH1D histo_meas2=createPseudoMeasurement("histo_meas2",withUFOF,1200,normalise_input);
-    if(flat)
-             histo_meas2=createPseudoMeasurementFlat("histo_meas2",withUFOF,400,normalise_input);
+    TH1D histo_meas2=createPseudoMeasurement("histo_meas2",1200);
     histo_meas2.Write(); //just for bookkeeping
 
-    /*
-     * create a pseudo systematic variation for the second measurement
-     */
     TH1D syshisto_meas2=createSystematicVariation(histo_meas2,1.5,"syshisto_meas2");
     syshisto_meas2.Write(); //just for bookkeeping
-
-    /*
-     * Create a covariance for measurement 2
-     * with a bit stronger correlations
-     */
 
     TH2D cov_2 = createCovarianceMatrix(histo_meas2,0.1);
     cov_2.Write(); //just for bookkeeping
 
 
+    ////////////////////////// DATA CREATED, THE ACTUAL COMBINATION STARTS BELOW ////////////////
 
     /*
      * Fill the information in the combiner.
      * This is the 'real' part of the program
+     *
+     * There are a few useful debug switches in case something seems off
+     *
+     *   measurement::debug=true;
+     *   combiner::debug=true;
+     *
      */
 
-    //measurement::debug=true;
 
-    std::cout << "here "<<std::endl;
-
-    combiner comb;
-    comb.setMode(combiner::lh_mod_neyman);
+    /*
+     * Create measurement objects
+     */
 
     measurement m1;
     m1.setMeasured(&histo_meas1);
-
-
-    //first covariance, then systematics, otherwise association is ambiguous (and will lead to error messages)
-    //m1.setEstimateCovariance(cov_1);
+    /*
+     * First set the estimate covariance, then add the uncertainties to avoid ambiguities.
+     */
+    m1.setEstimateCovariance(cov_1);
     m1.addSystematics("syst_a",&syshisto_meas1);
-
-    comb.addMeasurement(m1);
 
 
     measurement m2;
     m2.setMeasured(&histo_meas2);
-    //m2.setEstimateCovariance(cov_2);
-    /*
-     * The uncertainties MUST NOT have the same name, even if they are fully correlated. This case is defined later.
-     */
+    m2.setEstimateCovariance(cov_2);
     m2.addSystematics("syst_1",&syshisto_meas2);
-    //m2.setParameterType("syst_1",parameter::para_unc_relative);
+
+    //define this as a relative uncertainty, being treated differently (see paper)
+    m2.setParameterType("syst_1",parameter::para_unc_relative);
+
+
+    /*
+     * Create the combiner and add the measurements to be combined.
+     */
+    combiner comb;
+    comb.addMeasurement(m1);
     comb.addMeasurement(m2);
 
     /*
      * Measurements are added. Define correlations between the systematics
      */
-    //comb.setSystCorrelation("syst_a","syst_1",0.5);
+    comb.setSystCorrelation("syst_a","syst_1",0.5);
 
-
-    //normalise
-   // comb.setNormConstraint(1e2);//norm pull always small...
-   // comb.setExcludeBin(-1);
-
-
-    //combiner::debug=true;
-
-
+    /*
+     * Combine
+     */
     combinationResult comb_result=comb.combine();
 
-
-
+    /*
+     * The combinationResult class serves as a container for the result and contains all necessary information
+     */
 
 
     std::cout << comb_result.getCombinedCovariance() << std::endl;
 
-    std::cout << "done combining"<<std::endl;
     /*
-     * ****** safe and print the output
+     * ****** print and/or save the output in a text file
      */
     comb_result.printFullInfo(std::cout);
 
 
-    normaliser norm;
-    norm.setInput(comb_result);
-    auto normres = norm.getNormalised();
-    normres.printFullInfo(std::cout);
-
-
-
-
-
-
-
-
-    return 1;
 
     //can also be printed to an ofstream:
     std::ofstream output_textfile("differentialExample_output.txt");
@@ -173,9 +140,12 @@ int main(){
     output_textfile.close();
 
     /*
-     *  ** safe the output to root a histogram and graph
+     * safe the output to root a histogram and graph
+     * It is useful to start with the input histogram such that
+     * the bin boundaries are kept (these are lost during combination)
      */
-    TH1D result("result","result",nbins,-1,1);
+    TH1D result = histo_meas1;
+    result.SetName("combination_result");
 
     comb_result.fillTH1(&result);
     result.Write();
@@ -189,7 +159,7 @@ int main(){
      */
     TGraphAsymmErrors * tg = new  TGraphAsymmErrors(&result);
     tg->SetName("result_tgraph_asymmerr");
-    comb_result.fillTGraphAsymmErrors(tg, true);
+    comb_result.fillTGraphAsymmErrors(tg);
     tg->Write();
     f.Close();
 
@@ -208,13 +178,11 @@ int main(){
  */
 
 
-TH1D createPseudoMeasurement(TString name, bool withUFOF, int statistics, bool normalise){
+TH1D createPseudoMeasurement(TString name, int statistics, bool normalise){
 
-    if(withUFOF) //in this function done
-        throw std::runtime_error("inclusion of underflow and overflow is not implemented fully consistently everywhere yet. Please make sure your input does not include those.");
 
     //if(withUFOF)
-     //   nbins+=2;
+    //   nbins+=2;
     TH1D h(name,name,nbins,-2,2);
 
     h.FillRandom("gaus",statistics);
@@ -224,13 +192,10 @@ TH1D createPseudoMeasurement(TString name, bool withUFOF, int statistics, bool n
         h.Scale(1/integ);
 
 
-        return h;
+    return h;
 }
 
-TH1D createPseudoMeasurementFlat( TString name, bool withUFOF, int statistics, bool normalise){if(withUFOF) //in this function done
-    if(withUFOF) //in this function done
-        throw std::runtime_error("inclusion of underflow and overflow is not implemented fully consistently everywhere yet. Please make sure your input does not include those.");
-
+TH1D createPseudoMeasurementFlat( TString name, int statistics, bool normalise){
 
     double nperbin = (double)statistics/(double)nbins;
     TH1D h(name,name,nbins,-2,2);
@@ -262,7 +227,7 @@ TH2D createCovarianceMatrix(const TH1D& nominal, double correlation_strength){
         double stati=nominal.GetBinError(i);
         for(int j=1; j<=nominal.GetNbinsX();j++){
             double statj=nominal.GetBinError(j);
-            double correlation = exp(-correlation_strength*(i-j)*(i-j));
+            double correlation = exp(-1./correlation_strength*(i-j)*(i-j));
             h.SetBinContent(i,j, stati*statj*correlation );
         }
     }

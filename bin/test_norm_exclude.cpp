@@ -20,7 +20,7 @@
 // The following functions are only helpers to create data for pseudo measurements.
 // in reality, this would be the input from the measurements
 
-const int nbins = 5;
+const int nbins = 3;
 bool useflat=false;
 
 TH1D createPseudoMeasurement( TString name, int statistics);
@@ -35,7 +35,7 @@ int main(){
      */
 
     TFile f("differentialExample.root","RECREATE");
-
+    TGraphAsymmErrors * g = new TGraphAsymmErrors();
 
     /*
      * Create some pseudo measurements and a correlation matrix
@@ -45,13 +45,13 @@ int main(){
 
 
 
-    TH1D histo_meas1=createPseudoMeasurement("histo_meas1",1000);
+    TH1D histo_meas1=createPseudoMeasurement("histo_meas1",10000);
     histo_meas1.Scale(1./100.);
     // TH1D syshisto_meas1=createSystematicVariation(histo_meas1,1.2,"syshisto_meas1");
     TH2D cov_1 = createCovarianceMatrix(histo_meas1,0.1);
 
     // create a second measurement
-    TH1D histo_meas2=createPseudoMeasurement("histo_meas2",1100);
+    TH1D histo_meas2=createPseudoMeasurement("histo_meas2",11000);
     histo_meas2.Scale(1./110.);
     // TH1D syshisto_meas2=createSystematicVariation(histo_meas2,1.5,"syshisto_meas2");
     TH2D cov_2 = createCovarianceMatrix(histo_meas2,0.1);
@@ -87,6 +87,10 @@ int main(){
 
     combinationResult comb_result=comb.combine();
 
+    g->SetName("combined_non_norm");
+    comb_result.fillTGraphAsymmErrors(g);
+    g->Write();
+
     comb_result.printFullInfo(std::cout);
     //return 1;
 
@@ -99,6 +103,13 @@ int main(){
     normres.printFullInfo(std::cout);
    // norm.setIterations(1e6);
 
+    auto corr_combnorm = normres.getCombinedCorrelations();
+
+    g = new TGraphAsymmErrors();
+    g->SetName("first_com_then_norm");
+    normres.fillTGraphAsymmErrors(g);
+    g->Write();
+
     std::cout << ">>>>>>>>>>>>>>>>>>normalise first" << std::endl;
 
 
@@ -108,7 +119,7 @@ int main(){
     TH2D cov_1_norm = *norm.getNormalisedCovarianceTH2D(0.2,2);
 
     std::cout << ">>>>>meas1 normed" << std::endl;
-    norm.getNormalised().printFullInfo(std::cout);
+   // norm.getNormalised().printFullInfo(std::cout);
 
     norm.clear();
     norm.setInput(&histo_meas2,&cov_2);
@@ -122,12 +133,13 @@ int main(){
 
     std::cout << ">>>>>>>>>>>>>>>>>>remove a bin" << std::endl;
 
-    int removebin=0;
+    int removebin=1;
 
-    histo_meas1_norm = removeOneBin(histo_meas1_norm,removebin);
-    cov_1_norm = removeOneBin(cov_1_norm,removebin);
-    histo_meas2_norm = removeOneBin(histo_meas2_norm,removebin);
-    cov_2_norm = removeOneBin(cov_2_norm,removebin);
+   // histo_meas1_norm = removeOneBin(histo_meas1_norm,removebin);
+   // cov_1_norm = removeOneBin(cov_1_norm,removebin);
+   // histo_meas2_norm = removeOneBin(histo_meas2_norm,removebin);
+   // cov_2_norm = removeOneBin(cov_2_norm,removebin);
+
 
 
 
@@ -155,17 +167,34 @@ int main(){
 
     combinationResult comb_result_norm=comb_norm.combine();
 
-   // comb_result_norm.printFullInfo(std::cout);
+    comb_result_norm.printFullInfo(std::cout);
 
 
     std::cout << ">>>>>>>>>>>>>>>>>>normalise again, addbin bin back" << std::endl;
 
+    size_t iterations=1e6;
+
     norm.clear();
+    norm.setIterations(iterations);
     norm.addFloatingBin(removebin,"added");
     norm.setInput(comb_result_norm);
-    norm.getNormalised().printFullInfo(std::cout);
+    auto last_res = norm.getNormalised();
+    last_res.printFullInfo(std::cout);
+
+    auto corr_normcomb = last_res.getCombinedCorrelations();
+
+   std::cout << "iterations " << iterations << " Freb dist " <<  corr_normcomb.FrobeniusDistance(corr_combnorm) << std::endl;
+
+   corr_normcomb.removeEntry(removebin);
+   corr_combnorm.removeEntry(removebin);
+   std::cout << "only non removed part Freb dist " <<  corr_normcomb.FrobeniusDistance(corr_combnorm) << std::endl;
 
 
+
+   g = new TGraphAsymmErrors();
+    last_res.fillTGraphAsymmErrors(g);
+    g->Write();
+    f.Close();
 
 
 }
@@ -187,7 +216,7 @@ TH1D createPseudoMeasurement(TString name,  int statistics){
         return createPseudoMeasurementFlat(name,statistics);
     //if(withUFOF)
     //   nbins+=2;
-    TH1D h(name,name,nbins,-2,2);
+    TH1D h(name,name,nbins,-5,5);
 
     h.FillRandom("gaus",statistics);
 

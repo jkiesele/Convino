@@ -11,7 +11,7 @@
 #include "textFormatter.h"
 #include "helpers.h"
 
-combinationResult::combinationResult():chi2min_(0),isdifferential_(false),hasUF_(false),hasOF_(false),excludebin_(-1){}
+combinationResult::combinationResult():chi2min_(0),isdifferential_(false),excludebin_(-1){}
 
 void combinationResult::printResultOnly(std::ostream& out)const{
     out << "combined (minimum chi^2="<<chi2min_<<"):"<<std::endl;
@@ -69,10 +69,6 @@ void combinationResult::fillTH1(TH1*h)const{
     int bins=h->GetNbinsX();
     int start=1;
     int end=bins+1;
-    if(hasUF_)
-        start--;
-    if(hasOF_)
-        end++;
     /*
      * for future implementations: consder underflow/overflow
      */
@@ -96,11 +92,17 @@ std::vector<double> combinationResult::getCombSymmErr() const {
     return out;
 }
 
-void combinationResult::fillTGraphAsymmErrors(TGraphAsymmErrors*& h, bool cutUFOF)const{
+void combinationResult::fillTGraphAsymmErrors(TGraphAsymmErrors*& h)const{
     int bins=0;
     bool isempty=false;
-    if(h)
+    TString name="combined";
+    if(h){
         bins=h->GetN();
+        if(bins<1)
+            isempty=true;
+        if(((TString)h->GetName()).Length())
+            name = h->GetName();
+    }
     else
         isempty=true;
 
@@ -108,21 +110,18 @@ void combinationResult::fillTGraphAsymmErrors(TGraphAsymmErrors*& h, bool cutUFO
 
     int start=0;
     int end=bins;
-    if(hasUF_ && cutUFOF)
-        start++;
-    if(hasOF_ && cutUFOF)
-        end--;
 
     if(bins==0){//empty graph
         start=0;
         end=combined_.size();
         bins=combined_.size();
+        if(h)
+            delete h;
         h= new TGraphAsymmErrors(bins);
+        h->SetName(name);
     }
 
     if((int)combined_.size() != bins+start+(bins-end)){
-        if(!cutUFOF)
-            throw std::out_of_range("combinationResult::fillTGraphAsymmErrors: number of points doesn't match. input could have underflow/overflow and corresponding bins are not foreseen in the output graph. Try the cutUFOF option.");
         throw std::out_of_range("combinationResult::fillTGraphAsymmErrors: number of points doesn't match");
     }
 
@@ -185,7 +184,5 @@ void combinationResult::copyFrom(const combinationResult& r){
     constraints_=r.constraints_;
     chi2min_=r.chi2min_;
     isdifferential_=r.isdifferential_;
-    hasUF_=r.hasUF_;
-    hasOF_=r.hasOF_;
     excludebin_=r.excludebin_;
 }

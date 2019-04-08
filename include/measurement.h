@@ -136,7 +136,7 @@ public:
      * ambiguous. If this needs to be done, please use
      * setHessian(const triangularMatrix&h)
 	 */
-    void setEstimateHessian(const TH2D&h, bool includeudof=false);
+    void setEstimateHessian(const TH2D&h);
 
     /**
      * Defines the Covariance of the measurement.
@@ -156,7 +156,7 @@ public:
      * ambiguous. If this needs to be done, please use
      * setCovariance(const triangularMatrix&h)
      */
-    void setEstimateCovariance(const TH2D&h, bool includeudof=false);
+    void setEstimateCovariance(const TH2D&h);
 
 	/**
 	 * Returns the Hessian matrix (if set)
@@ -195,16 +195,7 @@ public:
 
 
 
-	/**
-	 * Excludes one bin for a differential, normalised measurement. Starting from 0
-	 * TBI
-	 * Resets with bin<0
-	 */
-	void setExcludeBin(int bin);
 
-	int getExcludeBin()const{
-	  return excludebin_;
-	}
 
 	/**
 	 * Uses stat only for estimation!
@@ -239,8 +230,6 @@ public:
     std::vector<TString> getEstimateNames()const;
 	const parameter& getParameter(const TString& name)const;
 	bool isDifferential()const{return isDifferential_;}
-	const bool& hasUF()const{return hasUF_;}
-	const bool& hasOF()const{return hasOF_;}
 
 	static bool debug;
 
@@ -248,7 +237,6 @@ private:
 
 	void copyFrom(const measurement& r);
 	std::vector<TString> create_default_estnames(size_t nnames)const;
-	int searchExcludeBinIndex(const triangularMatrix&, TString & name)const;
 
 	bool setup_;
 
@@ -278,21 +266,16 @@ private:
 	 */
 	correlationMatrix est_corr_;
 
-	bool hasUF_, hasOF_;
-
 	static size_t nobjects_;
 
 	bool isDifferential_;
-    int excludebin_; //just bookkeeping
     bool isnormalisedinput_;
 
     double normalisation_;
     bool normalise_;
 
-    TString excludedestname_;
     bool bypass_logic_check_;
     size_t this_obj_counter_;
-    static bool removeexcludebin;
 };
 
 

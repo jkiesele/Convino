@@ -9,7 +9,7 @@ The other blocks are commented individually
 
     isDifferential = true
     normalise = true
-    normalisedInput = true
+  #  normalisedInput = true #this feature is not available for text based input and under construction for the c++ interface
 
 [end global]
 

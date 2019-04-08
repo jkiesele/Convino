@@ -35,7 +35,7 @@ class combiner{
     friend class fitfunctionBase;
 public:
     combiner():lh_mod_(lh_mod_neyman),npars_(0),nest_(0),
-    lowestchi2_(1e19),isdifferential_(false),hasUF_(false),hasOF_(false),
+    lowestchi2_(1e19),isdifferential_(false),
     normalised_input_(false),
     excludebin_(-1),
     normaliseinfit_(false),normalisewithtoys_(false),
@@ -235,7 +235,7 @@ private:
 
     //double resolvethresh_;
 
-    bool isdifferential_,hasUF_,hasOF_, normalised_input_;
+    bool isdifferential_, normalised_input_;
     int excludebin_;
     bool normaliseinfit_,normalisewithtoys_;
 

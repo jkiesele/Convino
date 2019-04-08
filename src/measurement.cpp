@@ -19,10 +19,8 @@
 
 bool measurement::debug=false;
 size_t measurement::nobjects_=0;
-bool measurement::removeexcludebin=false;
 
-measurement::measurement():setup_(false),hasUF_(false), hasOF_(false),isDifferential_(false),
-        excludebin_(-1),
+measurement::measurement():setup_(false),isDifferential_(false),
         isnormalisedinput_(false),
         normalisation_(-1),
         normalise_(false),
@@ -33,8 +31,7 @@ measurement::measurement():setup_(false),hasUF_(false), hasOF_(false),isDifferen
 	    std::cout << "created measurement "<< this_obj_counter_<< std::endl;
 }
 
-measurement::measurement(const std::string& infile):setup_(false),hasUF_(false), hasOF_(false),isDifferential_(false),
-        excludebin_(-1),
+measurement::measurement(const std::string& infile):setup_(false),isDifferential_(false),
         bypass_logic_check_(false){
 	readFromFile(infile);
     this_obj_counter_=nobjects_;
@@ -65,14 +62,9 @@ void measurement::readFromFile(const std::string& infile){
 
 
 
-	excludedestname_="bin";
-	excludedestname_+=excludebin_;
 
 	if(fr.hasNonEmptyMarker(infile,"hessian")){
 		hessian.readFromFile(infile, "hessian");
-		int excl = searchExcludeBinIndex(hessian,excludedestname_);
-		if(excl>=0 && removeexcludebin)
-		    hessian.removeEntry(excl);
 		setHessian(hessian);
 	}
 	else if(fr.hasNonEmptyMarker(infile,"correlation matrix")){
@@ -81,9 +73,6 @@ void measurement::readFromFile(const std::string& infile){
 		triangularMatrix corr;
 
 		corr.readFromFile(infile,"correlation matrix");
-        int excl = searchExcludeBinIndex(corr,excludedestname_);
-        if(excl>=0 && removeexcludebin)
-            corr.removeEntry(excl);
 
 		setHessian(corr); //creates parameters
 
@@ -98,7 +87,6 @@ void measurement::readFromFile(const std::string& infile){
 				throw std::runtime_error("measurement::readFromFile: please provide the fitted constraints for all parameters when using a correlation matrix");
 
 			TString sysname = fr.getData<TString>(i,0);
-			if(sysname == excludedestname_ && removeexcludebin) continue;
 
 			TString constraintstr = fr.getData<TString>(i,1);
 
@@ -158,10 +146,6 @@ void measurement::readFromFile(const std::string& infile){
 			std::vector<uncertainty> vunc;
 			for(size_t e=0;e<fr.nEntries(l);e++){
 			    TString thisentry = fr.getData<TString>(l,e);
-			    if(excludebin_>=0 && thisentry.EndsWith(excludedestname_) && removeexcludebin){
-			        excludedestname_ = thisentry;
-			        continue;
-			    }
 				if(!e){
 					estnames.push_back(fr.getData<TString>(l,e));
 				}
@@ -247,7 +231,6 @@ void measurement::readFromFile(const std::string& infile){
 	for(size_t i=0;i<n_est;i++){
 		std::string istr     = toString(i);
 		TString estimatename = fr.getValue<TString>("name_"+istr);
-		if(excludebin_>=0 && estimatename.EndsWith(excludedestname_) && removeexcludebin) continue;
 		const double value   = fr.getValue<double>("value_"+istr);
 
 		size_t idx=SIZE_MAX;
@@ -305,18 +288,9 @@ void measurement::readFromFile(const std::string& infile){
 ////////// C++ interface //////////
 
 void measurement::setMeasured(const TH1D* h){
-	//check for over and underflow
-	int nbins=h->GetNbinsX()+2;
-	if(h->GetBinError(0))hasUF_=true;
-	if(h->GetBinError(nbins-1))hasOF_=true;
 
-	if(hasUF_ || hasOF_)
-	    std::cout << "measurement::setMeasured: Warning! underflow/overflow support is not fully validated, yet. \
-Please consider adding two 'real' bins to the input histograms corresponding to underflow and overflow" << std::endl;
-
-	int minbin=0,maxbin=nbins;
-	if(!hasUF_)minbin++;
-	if(!hasOF_)maxbin--;
+	int nbins=h->GetNbinsX()+1;
+	int minbin=1,maxbin=nbins;
 	std::vector<double> meas,stat;
 	for(int i=minbin;i<maxbin;i++){
 		meas.push_back(h->GetBinContent(i));
@@ -338,7 +312,6 @@ void measurement::setMeasured(const std::vector<double>& meas, const std::vector
 	std::vector<TString> estnames=create_default_estnames(meas.size());
 	std::vector<TString> used_estnames;
 	for(size_t e=0;e<meas.size();e++){
-	    if(e==excludebin_ && removeexcludebin)continue;
 		parameter pe;
 		pe.setType(parameter::para_estimate);
 		pe.setStat(stat.at(e));
@@ -368,10 +341,8 @@ void measurement::addSystematics(const TString& name, const TH1D* h){
 	if(!est_corr_.size() && !H_.size())
 		throw std::logic_error("measurement::addSystematics: first set measured values");
 
-	int nbins=h->GetNbinsX()+2;
-	int minbin=0,maxbin=nbins;
-	if(!hasUF_)minbin++;
-	if(!hasOF_)maxbin--;
+	int nbins=h->GetNbinsX()+1;
+	int minbin=1,maxbin=nbins;
 
 	std::vector<double> variedmeas;
 	for(int i=minbin;i<maxbin;i++){
@@ -457,17 +428,12 @@ void measurement::setHessian(const triangularMatrix&h){
 	}
 }
 
-void measurement::setEstimateHessian(const TH2D&h, bool includeudof){
+void measurement::setEstimateHessian(const TH2D&h){
     if(!paras_.size())
             throw std::runtime_error("measurement::setCovariance(const TH2&h): first set nominal input, then set esimate Hessian");
 
     triangularMatrix m(getEstimateNames());
-    if(excludebin_>-1 && removeexcludebin){
-        TH2D h2 = removeOneBin(h,excludebin_);
-        m.fillFromTH2(h2,includeudof);
-    }
-    else
-        m.fillFromTH2(h,includeudof);
+    m.fillFromTH2(h);
     bypass_logic_check_=true;
     setHessian(m);
     bypass_logic_check_=false;
@@ -482,7 +448,7 @@ void measurement::setCovariance(const triangularMatrix&h){
     matrixHelper m(H);
     if(! m.checkMatrixPosDefinite(H)){
         std::cout << "Warning: measurement::setCovariance(const triangularMatrix&h): Covariance not positive definite" << std::endl;
-        std::cout << "Will try to construct Hessian nevertheless. But fit might fail." <<std::endl;
+        std::cout << "Will try to construct Hessian nevertheless. But fit might fail. Check also debug output!" <<std::endl;
         triangularMatrix hes = h.createHessianFromCovariance();
         setHessian(hes);
     }
@@ -494,16 +460,11 @@ void measurement::setCovariance(const triangularMatrix&h){
 
 }
 
-void measurement::setEstimateCovariance(const TH2D&h, bool includeudof){
+void measurement::setEstimateCovariance(const TH2D&h){
     if(!paras_.size())
         throw std::runtime_error("measurement::setCovariance(const TH2&h): first set nominal input, then set esimate Covariance");
     triangularMatrix m(getEstimateNames());
-    if(excludebin_>-1 && removeexcludebin){
-        TH2D h2 = removeOneBin(h,excludebin_);
-        m.fillFromTH2(h2,includeudof);
-    }
-    else
-        m.fillFromTH2(h,includeudof);
+    m.fillFromTH2(h);
     bypass_logic_check_=true;
     setCovariance(m);
     bypass_logic_check_=false;
@@ -548,13 +509,7 @@ void measurement::setParameterValue(const TString & name, const double& val){
 }
 
 
-void measurement::setExcludeBin(int bin){
-    if(bin>=0){
-      //  throw std::runtime_error("measurement::setExcludeBin: not validated yet!");
-        std::cout << "measurement::setIsNormalisedInput: WARNING: experimental implementation" <<std::endl;
-    }
-    excludebin_=bin;
-}
+
 
 
 int measurement::getLeastSignificantBin()const{
@@ -904,7 +859,6 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 	//x^2 part - symmetric
 	double combsum=0;
 	for(size_t mu=0;mu<nx;mu++){
-	    if(excludebin_ == (int) mu) continue;
 	    combsum += pars[x_.at(mu).getAsso()];
 	}
 	//double rest_norm_comb = 1 - combsum;
@@ -1048,10 +1002,7 @@ void measurement::copyFrom(const measurement& r){
 	x_=r.x_;
 	c_external_=r.c_external_;
 	est_corr_=r.est_corr_;
-	hasUF_=r.hasUF_;
-	hasOF_=r.hasOF_;
 	isDifferential_=r.isDifferential_;
-	excludebin_ = r.excludebin_;
 }
 
 std::vector<TString> measurement::getParameterNames()const{
@@ -1070,22 +1021,7 @@ std::vector<TString> measurement::getEstimateNames()const{
 
 }
 
-int measurement::searchExcludeBinIndex(const triangularMatrix& m, TString & name)const{
-    if(excludebin_<0)return -1;
-    TString endstring="bin";
-    endstring+=excludebin_;
-    auto names = m.createNamesVector();
-    name="";
-    for(size_t i=0;i<names.size();i++){
-        if(names.at(i).EndsWith(endstring)){
-            if(name.Length())
-                throw std::runtime_error("measurement::searchExcludeBinIndex: exclude bin ambiguous. Make sure input estiamtes are named XXXbin<number>");
-            name=names.at(i);
-        }
-    }
-    return m.getEntryIndex(name);
 
-}
 
 const parameter& measurement::getParameter(const TString& name)const{
 	for(const auto& p:paras_)

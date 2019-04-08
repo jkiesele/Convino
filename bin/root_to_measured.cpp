@@ -24,14 +24,13 @@ void coutHelp(){
 
     std::cout << "\n-p              measurement prefix name (will be added to \"binX\")";
     std::cout << "\n-a              add to nominal histogram to get syst. varied histogram";
-    std::cout << "\n--noufof        do not consider under and overflow bins";
 
     std::cout << std::endl;
     std::cout << "EXAMPLE: root_to_matrix  -o cov my_file.root my_histo_2d" <<std::endl;
     std::cout << std::endl;
 }
 
-std::vector<double> extractHisto(const TString& file, const TString& histo, bool ignoreufof, std::vector<double>& stat){
+std::vector<double> extractHisto(const TString& file, const TString& histo, std::vector<double>& stat){
 
     TFile f(file);
     auto* o=f.Get(histo);
@@ -49,23 +48,15 @@ std::vector<double> extractHisto(const TString& file, const TString& histo, bool
     int xbins = h->GetNbinsX();
 
     TString output="";
-    int maxbin=xbins+2;
-    int minbin=0;
+    int maxbin=xbins+1;
+    int minbin=1;
 
     if(!xbins){
         std::cout << "histogram does not contain any bin"<<std::endl;
         exit(-1);
     }
 
-    if(!ignoreufof &&  (h->GetBinContent(0,0)==0 && h->GetBinError(0,0)==0)){
-        std::cout << "histogram "<<file <<" :/ "<< histo<<"does not contain any underflow bin, please run with --noufof\n";
-        std::cout << "also, please notice that migrations out of the phase space cannot be taken into account this way."<<std::endl;
-        exit(-1);
-    }
-    if(ignoreufof){
-        maxbin--;
-        minbin++;
-    }
+
     std::vector<double> out;
     stat.clear();
 
@@ -86,15 +77,12 @@ int main(int argc, char* argv[]){
     TString prefix="";
     std::vector<TString> opts;
 
-    bool ignoreufof=false;
     bool addtonominal=false;
 
     for(int i=1;i<argc;i++){
         TString targv=argv[i];
-        if(targv == "--noufof"){
-            ignoreufof=true;
-        }
-        else if(targv.BeginsWith("-")){
+
+        if(targv.BeginsWith("-")){
 
             if(targv.Contains("h")){
                 coutHelp();
@@ -132,12 +120,12 @@ int main(int argc, char* argv[]){
 
     //get nominal
     std::vector<double> stat ,dummy;
-    std::vector<double>  nominal = extractHisto(opts.at(0),opts.at(1),ignoreufof,stat);
+    std::vector<double>  nominal = extractHisto(opts.at(0),opts.at(1),stat);
     std::vector<std::pair<TString,std::vector<double> > > systs;
     for(size_t i=2;i<opts.size();i++){
         TString sysname = opts.at(i);
         std::cout << sysname << std::endl;
-        std::vector<double> sys = extractHisto(opts.at(i+1),opts.at(i+2),ignoreufof,dummy);
+        std::vector<double> sys = extractHisto(opts.at(i+1),opts.at(i+2),dummy);
         i+=2;
         systs.push_back(std::pair<TString,std::vector<double> > (sysname,sys));
     }
