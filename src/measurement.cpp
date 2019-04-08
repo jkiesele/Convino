@@ -872,6 +872,7 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 
 
 		double x_comb_mu = pars[x_.at(mu).getAsso()];
+        double x_meas_mu = x_.at(mu).getNominalVal();
 		/*
 		if(excludebin_ == (int) mu){
 		    if(isnormalisedinput_)
@@ -881,7 +882,6 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
         if(normalise_)
             x_comb_mu*=normalisation_;
 		 */
-		double x_meas_mu = x_.at(mu).getNominalVal();
 
 		for(size_t i=0;i<nlamb;i++){
 			if(! lambdas_.at(i).isRelative()) continue;

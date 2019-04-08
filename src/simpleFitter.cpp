@@ -40,7 +40,7 @@ bool simpleFitter::debug=false;
 simpleFitter::simpleFitter():chi2min_(1e6),maxcalls_(4e8),
 		minsuccessful_(false),minossuccessful_(false),tolerance_(0.1),functobemin_(0),
 		gradfunctobemin_(0),basefunctobemin_(0),pminimizer_(0),
-		strategy_(2),dummyrun_(false),type_(type_minuit){
+		strategy_(2),dummyrun_(false),fastmode_(false),type_(type_minuit){
 }
 
 simpleFitter::~simpleFitter(){
@@ -211,7 +211,7 @@ void simpleFitter::fit(){
 
 
 	minsuccessful_=pminimizer_->Minimize();
-	if(printlevel>1)
+	if(printlevel>0)
 		std::cout << "simpleFitter::fit(): minimization done" <<std::endl;
 	const double *xs = pminimizer_->X();
 	const double * errs=pminimizer_->Errors();
@@ -225,7 +225,7 @@ void simpleFitter::fit(){
 			paraname=paranames_.at(i);
 		else
 			paraname=(TString)"par"+(i);
-		if(std::find(minospars_.begin(),minospars_.end(),i) != minospars_.end()){
+		if(! fastmode_ && std::find(minospars_.begin(),minospars_.end(),i) != minospars_.end()){
 
 			if(errs && !pminimizer_->GetMinosError(i, paraerrsdown_.at(i), paraerrsup_.at(i))){
 				paraerrsdown_.at(i)=-errs[i];
@@ -249,9 +249,13 @@ void simpleFitter::fit(){
 			if(printlevel>-1)
 				std::cout << paraname+" "  << someblanks << paras_.at(i)<< " +"<< paraerrsup_.at(i) << " " << paraerrsdown_.at(i)<< std::endl;
 		}
+		if(printlevel>0)
+		    std::cout << paraname << std::endl;
 	}
 
 
+    if(printlevel>0)
+        std::cout << "simpleFitter::fit(): minimisation done, errors done, filling info" << std::endl;
 	chi2min_=pminimizer_->MinValue();
 	std::vector<double> dummy;
 	dummy.resize(paras_.size(),0);
@@ -260,21 +264,22 @@ void simpleFitter::fit(){
 	for(size_t i=0;i<paras_.size();i++){
 		for(size_t j=0;j<paras_.size();j++){
 			paracorrs_.at(i).at(j)=pminimizer_->Correlation(i,j);
-
-			//  std::cout << i << " " <<j << paracorrs_.at(i).at(j) <<std::endl;
 		}
 	}
-	//Hessian
-	double hessian_s[paras_.size()*paras_.size()];
-	pminimizer_->GetHessianMatrix(hessian_s);
+
 	hessian_.resize(paras_.size(),std::vector<double> (paras_.size(),0));
+	if(!fastmode_){
+	    if(printlevel>0)
+	        std::cout << "simpleFitter::fit(): getting Hessian" << std::endl;
+	    double hessian_s[paras_.size()*paras_.size()];
+	    pminimizer_->GetHessianMatrix(hessian_s);
 
-	for(size_t i=0;i<paras_.size();i++){
-		for(size_t j=0;j<paras_.size();j++){
-			hessian_.at(i).at(j)=hessian_s[i *paras_.size() + j];
-		}
+	    for(size_t i=0;i<paras_.size();i++){
+	        for(size_t j=0;j<paras_.size();j++){
+	            hessian_.at(i).at(j)=hessian_s[i *paras_.size() + j];
+	        }
+	    }
 	}
-
 
 	if(printlevel>1){
 		for(size_t i=0;i<paras_.size();i++){
@@ -285,6 +290,9 @@ void simpleFitter::fit(){
 			std::cout << std::endl;
 		}
 	}
+
+    if(printlevel>0)
+        std::cout << "simpleFitter::fit(): done" << std::endl;
 
 }
 

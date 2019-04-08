@@ -70,7 +70,9 @@ public:
 	void setStrategy(int str){strategy_=str;}
 	void feedErrorsToSteps();
 
-
+	void setFastMode(bool fastm){
+	    fastmode_=fastm;
+	}
 
 	void fit();
 
@@ -169,7 +171,7 @@ private: //set some to protected if inheritance is needed
 
 
 	int strategy_;
-	bool dummyrun_;
+	bool dummyrun_,fastmode_;
 
 	mintypes type_;
 };
