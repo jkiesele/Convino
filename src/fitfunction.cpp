@@ -23,7 +23,6 @@ void fitfunctionBase::eval(const double*x, double& f, double* df)const{
 	if(!c) throw std::logic_error("fitfunctionBase::eval no combiner associated");
 
 	f=0;
-	long double f_int=0;
 
 	const std::vector<measurement>& meass=c->measurements_;
 	size_t nmeas=meass.size();
@@ -35,7 +34,7 @@ void fitfunctionBase::eval(const double*x, double& f, double* df)const{
 //#endif
 	for(size_t i=0;i<nmeas;i++){
 		double f_local=meass.at(i).evaluate(x,df,c->lh_mod_==combiner::lh_mod_pearson,nDim());
-		f_int+=(long double)f_local;
+		f+=f_local;
 	}
 	if(meass.size()<1)
 	    throw std::out_of_range("fitfunctionBase::eval: No measurements associated");
@@ -51,7 +50,7 @@ void fitfunctionBase::eval(const double*x, double& f, double* df)const{
 
 	const double sqrt2 = std::sqrt(2);
 
-	if(f_int!=f_int){
+	if(f!=f){
 		throw std::runtime_error("fitfunctionBase::eval: nan in measurement chi2");
 	}
 
@@ -75,20 +74,18 @@ void fitfunctionBase::eval(const double*x, double& f, double* df)const{
 					pj = 1e4*x[j];
 			}
 			if(i==j)
-			    f_int += (long double) (pi * c->inv_priors_[i][j] * pj);
+			    f += (pi * c->inv_priors_[i][j] * pj);
 			else
-			    f_int += (long double) (2.* pi * c->inv_priors_[i][j] * pj);
+			    f += (2.* pi * c->inv_priors_[i][j] * pj);
 		}
 	}
 
-	if(f_int!=f_int){
+	if(f!=f){
 		for(int i=0;i<nDim();i++){
 			std::cout << x[i] << std::endl;
 		}
 		throw std::runtime_error("fitfunctionBase::eval: nan in external correlations");
 	}
-	f=f_int;
-
 
 }
 
