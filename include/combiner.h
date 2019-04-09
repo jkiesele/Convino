@@ -100,6 +100,12 @@ public:
 
     ///// ----- helpers for text-based interface -----
     void readConfigFile(const std::string & filename);
+
+    /**
+     * can be used to read-in correlations from an external file for text based and C++ interface
+     */
+    void readCorrelationFile(const std::string & filename, bool requiremarkers=false);
+
     std::vector<std::vector<combinationResult> >
     scanCorrelations(std::ostream& out, const combinationResult& nominal, const std::string& outdir="")const;
 
