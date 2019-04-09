@@ -88,7 +88,11 @@ int main(){
     measurement m1;
     m1.setMeasured(&histo_meas1);
     /*
-     * First set the estimate covariance, then add the uncertainties to avoid ambiguities.
+     * First set the estimate covariance,
+     * then add the uncertainties to avoid ambiguities.
+     * If no covariance is set, bins will be treated as
+     * uncorrelated and statistical uncertainty from
+     * input TH1D will be used
      */
     m1.setEstimateCovariance(cov_1);
     m1.addSystematics("syst_a",&syshisto_meas1);
@@ -98,10 +102,10 @@ int main(){
     m2.setMeasured(&histo_meas2);
     m2.setEstimateCovariance(cov_2);
     m2.addSystematics("syst_1",&syshisto_meas2);
-
-    //define this as a relative uncertainty, being treated differently (see paper)
+    /*
+     * define this as a relative uncertainty, being treated differently (see paper)
+     */
     m2.setParameterType("syst_1",parameter::para_unc_relative);
-
 
     /*
      * Create the combiner and add the measurements to be combined.
