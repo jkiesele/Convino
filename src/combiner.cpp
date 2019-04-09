@@ -180,7 +180,7 @@ void combiner::readCorrelationFile(const std::string & filename, bool requiremar
         fr.setEndMarker("[end correlations]");
     }
     fr.setDelimiter("=");
-    fr.readFile(configfile_);
+    fr.readFile(filename);
     for(size_t i=0;i<fr.nLines();i++){
         if(fr.nEntries(i)<2)continue;
         correlationscan cscans;
