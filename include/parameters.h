@@ -20,7 +20,7 @@ public:
 
 	enum para_type{para_unc_absolute,para_unc_relative,para_unc_lognormal,para_estimate};
 
-	parameter():startval_(0),type_(para_unc_absolute),associatedto_(0){}
+	parameter():startval_(0),type_(para_unc_absolute),associatedto_(0),stat_(1){}
 	virtual ~parameter(){}
 
 	void setType(para_type t){type_=t;}
