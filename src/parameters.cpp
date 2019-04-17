@@ -7,4 +7,3 @@
 
 #include "parameters.h"
 #include <iostream>
-

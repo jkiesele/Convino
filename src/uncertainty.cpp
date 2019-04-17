@@ -10,6 +10,23 @@
 #include "TString.h"
 
 
+double uncertainty::getDeltaSum(const double* pars, const int& max)const{
+
+    double nominal = pars[associatedto_];
+    double sum=0;
+    for(size_t i=0;i< delta_associations_to_pars_.size();i++){
+        if(k_sigmasqs_[i]<=0)continue;
+        double delta = nominal - pars[delta_associations_to_pars_[i]];
+        sum+= delta*delta/k_sigmasqs_[i];
+    }
+
+    return sum;
+
+}
+
+
+
+
 void uncertainty::readFromString(std::string s){
     /*
      * either just a number or a string of the format

@@ -241,8 +241,31 @@ private:
 	bool setup_;
 
 	triangularMatrix H_;
+
+	//used in all input interfaces
 	std::vector<parameter> paras_;
 
+    namedMatrix<uncertainty> c_external_;
+
+
+    correlationMatrix est_corr_;
+
+    /*
+     * Temps for root/c++ interface
+     */
+
+    static size_t nobjects_;
+
+    bool isDifferential_;
+    bool isnormalisedinput_;
+
+    double normalisation_;
+    bool normalise_;
+
+    bool bypass_logic_check_;
+    size_t this_obj_counter_;
+
+	/////////// filled only in setup() step
 	/*
 	 * Matrices from Hessian
 	 */
@@ -254,28 +277,11 @@ private:
 	std::vector<std::vector<double> > LM_, LD_;
 	std::vector<std::vector<uncertainty> > Lk_;
 
-
 	std::vector<parameter> lambdas_;
 	std::vector<parameter> x_;
 
 
-	namedMatrix<uncertainty> c_external_;
 
-	/*
-	 * Temps for root/c++ interface
-	 */
-	correlationMatrix est_corr_;
-
-	static size_t nobjects_;
-
-	bool isDifferential_;
-    bool isnormalisedinput_;
-
-    double normalisation_;
-    bool normalise_;
-
-    bool bypass_logic_check_;
-    size_t this_obj_counter_;
 };
 
 

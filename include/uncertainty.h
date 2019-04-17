@@ -11,8 +11,16 @@
 #include <iostream>
 #include <string>
 #include <math.h>
+#include "parameters.h"
 
-class uncertainty{
+/*
+ *
+ * Make this inherit from parameter and then cast to it in the loop?
+ *
+ */
+
+
+class uncertainty: public parameter{
 public:
     uncertainty():upvar_(0),downvar_(0){}
 
@@ -25,6 +33,8 @@ public:
     const double& upVar()const{return upvar_;}
     const double& downVar()const{return downvar_;}
 
+    bool isRelative()const{return type_==para_unc_relative || type_==para_unc_lognormal;}
+
     inline double symm()const{
         double sign=1;
         if(upvar_<downvar_)sign=-1;
@@ -36,6 +46,29 @@ public:
         if(lambda>=0)return upvar_*lambda;
         else return downvar_*fabs(lambda);
     }
+
+
+    void setSigmaSq(const size_t & global_est_index, const size_t & global_sigmapar_index, double sigmasq){
+        k_sigmasqs_.resize(global_est_index+1,-1);
+        k_sigmasqs_.at(global_est_index) = sigmasq;
+        delta_associations_to_pars_.resize(global_est_index+1,0);
+        delta_associations_to_pars_.at(global_est_index)=global_sigmapar_index;
+    }
+
+
+
+    const size_t& getParVal(const size_t& global_est_index, const double* pars, const int& max)const{
+        if(global_est_index>=k_sigmasqs_.size())
+            return pars[associatedto_];
+
+        if(k_sigmasqs_.at(global_est_index)>0)
+            return pars[delta_associations_to_pars_.at(global_est_index)];
+        return pars[associatedto_];
+    }
+
+
+    double getDeltaSum(const double* pars, const int& max)const;
+
 
     /**
      * either just a number or a string of the format

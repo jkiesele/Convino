@@ -885,12 +885,12 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 
 		for(size_t i=0;i<nlamb;i++){
 			if(! lambdas_.at(i).isRelative()) continue;
-			double lambda_i = pars[lambdas_.at(i).getAsso()];
+			double lambda_i = lambdas_.at(i).getParVal(x_.at(mu).getAsso(),pars,maxidx);//   pars[lambdas_.at(i).getAsso()];
 			x_comb_mu *= (1 - Lk_.at(mu).at(i).eval(lambda_i)/x_meas_mu);
 		}
 		for(size_t i=0;i<nlamb;i++){
 			if(lambdas_.at(i).isRelative()) continue;
-			double lambda_i = pars[lambdas_.at(i).getAsso()];
+			double lambda_i = lambdas_.at(i).getParVal(x_.at(mu).getAsso(),pars,maxidx);
 			x_comb_mu -= Lk_.at(mu).at(i).eval(lambda_i);
 		}
 
@@ -910,12 +910,12 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 			 */
 			for(size_t i=0;i<nlamb;i++){
 				if(! lambdas_.at(i).isRelative()) continue;
-				double lambda_i = pars[lambdas_.at(i).getAsso()];
+				double lambda_i = lambdas_.at(i).getParVal(x_.at(nu).getAsso(),pars,maxidx);
 				x_comb_nu *= (1 - Lk_.at(nu).at(i).eval(lambda_i)/x_meas_nu);
 			}
 			for(size_t i=0;i<nlamb;i++){
 				if(lambdas_.at(i).isRelative()) continue;
-				double lambda_i = pars[lambdas_.at(i).getAsso()];
+				double lambda_i = lambdas_.at(i).getParVal(x_.at(nu).getAsso(),pars,maxidx);
 				x_comb_nu -= Lk_.at(nu).at(i).eval(lambda_i);
 			}
 
