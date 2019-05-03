@@ -90,7 +90,7 @@ void namedMatrix<T>::addColumn(const TString& name, const std::vector<T> vals){
         throw std::runtime_error("namedMatrix::addColumn: names must be unique");
 
     if(vals.size()!=namesi_.size())
-        throw std::runtime_error("namedMatrix::addColumn: size does not match: "+toString(vals.size())+"/"+toString(namesi_.size()));
+        throw std::runtime_error("namedMatrix::addColumn: size does not match: "+toString(vals.size())+" to be added to "+toString(namesi_.size()));
 
     for(size_t j=0;j<vals.size();j++){
         std::vector<T>& e=entries_.at(j);

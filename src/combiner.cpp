@@ -573,6 +573,7 @@ combiner::scanExcludeBins(std::ostream& out, const combinationResult& nominal)co
     int nbins = measurements_.at(0).getEstimates().size();
 
     //FIXME THIS WILL CRASH
+
     for(int i=0;i<nbins;i++){
         combiner ccp=*this;
         if(i==nombin)continue;
@@ -686,7 +687,6 @@ combinationResult combiner::combinePriv(){
         //m.setup();
     }
 
-
     npars_=fitparas.size();
     nest_=tobecombined_.size();
     std::vector<double> steps(fitparas.size(),1);//remove in the end
@@ -705,6 +705,28 @@ combinationResult combiner::combinePriv(){
     inv_priors_.Invert(&det);
     if(!det || det<0){
         throw std::runtime_error("combiner::combinePriv: external correlations non invertible or not positive definite");
+    }
+
+    /*
+     * Add uncertainties of uncertainties
+     */
+
+    size_t n_uncofunc=0;
+    for(auto& m:measurements_){
+        auto& lk = m.getFullUncMatrix();
+        for(auto & kv:lk){
+            for(auto& k:kv){
+                if(k.hasUnvOfUnc()){
+                    fitparas.push_back(0);
+                    names.push_back(k.getAssoEstimateName()+","+k.name());
+                    k.setSubParaAsso(fitparas.size()-1);
+                    steps.push_back(sqrt(k.getUncSigmaSq()));
+                    n_uncofunc++;
+                    if(debug)
+                        std::cout << "associated sub para for " << k <<": "<< fitparas.size()-1<< std::endl;
+                }
+            }
+        }
     }
 
 
@@ -726,7 +748,7 @@ combinationResult combiner::combinePriv(){
     fitfunctionGradient func(this);
     fitter.setMinFunction(func);
     const size_t nsyst=nsys;
-    const size_t ncomb=fitter.getParameters()->size()-nsyst ;
+    const size_t ncomb=fitter.getParameters()->size()-nsyst-n_uncofunc;
     if(debug)
         simpleFitter::printlevel=2;
 
@@ -781,12 +803,8 @@ combinationResult combiner::combinePriv(){
 
     if(debug)
         std::cout << "combiner::combine: first rough fit" <<std::endl;
-    //fitter.setStrategy(0);
-    //fitter.setTolerance(1.);
-    //fitter.setFastMode(true);
-    //fitter.fit();
-    //fitter.feedErrorsToSteps();
-    //fitter.setFastMode(false);
+
+    fitter.setFastMode(false);
     fitter.setStrategy(2);
     fitter.setTolerance(0.1);
     if(debug)
@@ -840,18 +858,19 @@ combinationResult combiner::combinePriv(){
     }
 
     out.post_sys_correlations_=external_correlations_;
-    for(size_t i=0;i<nsyst;i++){
+    for(size_t i=0;i<nsyst+n_uncofunc;i++){
         out.pulls_.push_back(fitter.getParameter(i));
         out.constraints_.push_back(fitter.getParameterErr(i));
-        for(size_t j=0;j<=i;j++){
-            out.post_sys_correlations_.setEntry(i,j,fitter.getCorrelationCoefficient(i,j));
-        }
+        if(i<nsyst)
+            for(size_t j=0;j<=i;j++){
+                out.post_sys_correlations_.setEntry(i,j,fitter.getCorrelationCoefficient(i,j));
+            }
     }
 
     out.post_all_correlations_ = fitter.getCorrelationMatrix();
 
     if(debug && nsyst<20)
-        std::cout << "post combine systematics correlations: \n"<< out.post_sys_correlations_ << std::endl;
+        std::cout << "post combine all correlations: \n"<< fitter.getCorrelationMatrix() << std::endl;
 
 
 

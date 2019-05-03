@@ -7,22 +7,8 @@
 
 
 #include "../include/uncertainty.h"
+#include "../include/textFormatter.h"
 #include "TString.h"
-
-
-double uncertainty::getDeltaSum(const double* pars, const int& max)const{
-
-    double nominal = pars[associatedto_];
-    double sum=0;
-    for(size_t i=0;i< delta_associations_to_pars_.size();i++){
-        if(k_sigmasqs_[i]<=0)continue;
-        double delta = nominal - pars[delta_associations_to_pars_[i]];
-        sum+= delta*delta/k_sigmasqs_[i];
-    }
-
-    return sum;
-
-}
 
 
 
@@ -33,6 +19,11 @@ void uncertainty::readFromString(std::string s){
      * (+X-Y), where X is the upward variation and Y the downward variation.
      * (-X+Y) or (+X+Y) or (-X-Y) are also possible and the sign information
      * is propagated accordingly
+     *
+     * Can also contain RELATIVE uncertainty on uncertainty with format
+     * (+X-Y,R), with R being the relative uncertainty
+     * or
+     * (X,R) for symmetric uncertainties
      */
     if(s.length()<1)
         throw std::runtime_error("uncertainty::readFromString: string empty");
@@ -46,7 +37,7 @@ void uncertainty::readFromString(std::string s){
         throw std::runtime_error("uncertainty::readFromString: string format wrong: "+s);
     if(s.at(0)!='(')
         throw std::runtime_error("uncertainty::readFromString: string format wrong: "+s);
-    if(s.length()<6)
+    if(s.length()<5)
         throw std::runtime_error("uncertainty::readFromString: string format wrong: "+s);
 
     TString tst=s;
@@ -55,7 +46,27 @@ void uncertainty::readFromString(std::string s){
     //remove parentheses
     s=s.substr(1,s.length()-2);
 
+    textFormatter tf;
+    tf.setDelimiter(",");
+    auto valandrel=tf.getFormatted(s);
+    double relunc=0;
+    if(valandrel.size()>1){
+        relunc = atof(valandrel.at(1).data());
+        uncofunc2_ = relunc*relunc;
+        s=valandrel.at(0);
+    }
+    else{
+        uncofunc2_=-100;
+        s=valandrel.at(0);
+    }
+
     size_t seppos=s.find_last_of('-');
+    if(seppos==std::string::npos){
+        upvar_=atof(s.data());
+        downvar_=-upvar_;
+        return;
+    }
+
     if(seppos==std::string::npos || seppos==0){
         seppos=s.find_last_of('+');
     }
@@ -75,6 +86,7 @@ void uncertainty::readFromString(std::string s){
 
 
 std::ostream& operator<<(std::ostream& os,  uncertainty& u){
+    os << u.name() <<","<<u.getAssoEstimateName()<<":";
     if(u.upVar()>=0)
         os << "(+" << u.upVar();
     else
@@ -83,7 +95,10 @@ std::ostream& operator<<(std::ostream& os,  uncertainty& u){
         os << "+" << u.downVar();
     else
         os << u.downVar();
+    if(u.hasUnvOfUnc())
+        os << ","<< sqrt(u.getUncSigmaSq());
     os << ")";
+    os << ";(" << u.getAsso() <<","<<u.getSubParaAsso() <<")";
 
     return os;
 }

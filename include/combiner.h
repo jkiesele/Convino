@@ -20,6 +20,7 @@
 #include <stdexcept>
 #include "combinationResult.h"
 #include "measurement.h"
+#include "uncertainty.h"
 
 class TH1;
 class pseudoGenerator;
@@ -223,7 +224,7 @@ private:
     std::vector<correlationscan> syst_scanranges_;
     correlationMatrix external_correlations_;
     TMatrixD inv_priors_;
-    std::vector<parameter> allsysparas_;
+    std::vector<uncertainty> allsysparas_;
 
     std::vector<measurement> measurements_;
     std::vector<parameter>  allparas;

@@ -220,18 +220,24 @@ public:
 	void associateAllLambdas(const triangularMatrix& fullLambdaCorrs);
 	const std::vector<parameter> & getParameters()const{return paras_;}
 	std::vector<TString> getParameterNames()const;
+
+
 	void setup();
 	double evaluate(const double* pars, double* df, const bool& pearson, const size_t& maxidx)const;
 
 	double getCombSum(const double * pars)const;
 
-	const std::vector<parameter> & getLambdas()const{return lambdas_;}//for priors
+	const std::vector<uncertainty> & getLambdas()const{return Lk_.at(0);}//for priors
+	const std::vector<std::vector<uncertainty> > & getFullUncMatrix()const{return Lk_;}
+	std::vector<std::vector<uncertainty> > & getFullUncMatrix(){return Lk_;}
+
 	const std::vector<parameter> & getEstimates()const{return x_;}
     std::vector<TString> getEstimateNames()const;
 	const parameter& getParameter(const TString& name)const;
 	bool isDifferential()const{return isDifferential_;}
 
 	static bool debug;
+    static bool heavy_debug;
 
 private:
 
@@ -243,6 +249,7 @@ private:
 	triangularMatrix H_;
 
 	//used in all input interfaces
+	//no NOT include uncertainty of uncertainty paras
 	std::vector<parameter> paras_;
 
     namedMatrix<uncertainty> c_external_;
@@ -277,7 +284,7 @@ private:
 	std::vector<std::vector<double> > LM_, LD_;
 	std::vector<std::vector<uncertainty> > Lk_;
 
-	std::vector<parameter> lambdas_;
+	//std::vector<parameter> lambdas_;
 	std::vector<parameter> x_;
 
 

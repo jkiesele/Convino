@@ -66,16 +66,12 @@ public:
 
 protected:
 	double startval_;
-private:
 	TString name_;
 	para_type type_;
 
 protected:
 	size_t associatedto_;
 
-	//these are up to size of global parameters - increases memory usage but makes evaluation faster
-    std::vector<size_t> delta_associations_to_pars_;
-	std::vector<double> k_sigmasqs_;
 
 	double stat_;
 };

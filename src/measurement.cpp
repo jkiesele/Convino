@@ -18,6 +18,7 @@
 #endif
 
 bool measurement::debug=false;
+bool measurement::heavy_debug=false;
 size_t measurement::nobjects_=0;
 
 measurement::measurement():setup_(false),isDifferential_(false),
@@ -167,6 +168,8 @@ void measurement::readFromFile(const std::string& infile){
 		c_external_ = namedMatrix<uncertainty>(estnames,sysnames);
 		for(size_t i=0;i<c_external_.nRows();i++){
 			for(size_t j=0;j<c_external_.nCols();j++){
+			    unc.at(i).at(j).setName(c_external_.getEntryNameCol(j));
+			    unc.at(i).at(j).setAssoEstimateName(c_external_.getEntryNameRow(i));
 				c_external_.setEntry(i,j,unc.at(i).at(j));
 			}
 		}
@@ -351,12 +354,16 @@ void measurement::addSystematics(const TString& name, const TH1D* h){
 	addSystematics(name,variedmeas);
 }
 void measurement::addSystematics(const TString& name, std::vector<double> variedmeas){
-    std::vector<uncertainty>  uncs(variedmeas.size());
+    std::vector<uncertainty>  uncs; //(variedmeas.size());
+    auto enames = getEstimateNames();
     size_t i=0;
     for(const auto& p:paras_){
         if(p.getType()==parameter::para_estimate){
             variedmeas.at(i)-=p.getNominalVal();
-            uncs.at(i)=uncertainty(variedmeas.at(i),-variedmeas.at(i));
+            auto unc = uncertainty(variedmeas.at(i),-variedmeas.at(i));
+            unc.setName(name);
+            unc.setAssoEstimateName(enames.at(i));
+            uncs.push_back(unc);
             i++;
         }
     }
@@ -365,11 +372,15 @@ void measurement::addSystematics(const TString& name, std::vector<double> varied
 
 void measurement::addSystematics(const TString& name, double scaler){
     std::vector<uncertainty>  uncs;
+    auto enames = getEstimateNames();
     size_t i=0;
     for(const auto& p:paras_){
         if(p.getType()==parameter::para_estimate){
             double variedmeas = p.getNominalVal() * scaler - p.getNominalVal();
-            uncs.push_back(uncertainty(variedmeas,-variedmeas));
+            auto unc = uncertainty(variedmeas,-variedmeas);
+            unc.setName(name);
+            unc.setAssoEstimateName(enames.at(i));
+            uncs.push_back(unc);
             i++;
         }
     }
@@ -585,15 +596,17 @@ void measurement::associateAllLambdas(const triangularMatrix& fullLambdaCorrs){
 			if(name == p.name()){
 				p.setAsso(i);
 				if(debug)
-					std::cout << p.name() << " " << i << std::endl;
+				    std::cout << p.name() << " " << i << std::endl;
 			}
 		}
-		for(auto& p: lambdas_){
-			if(name == p.name()){
-				p.setAsso(i);
-				if(debug)
-					std::cout << p.name() << " " << i << std::endl;
-			}
+		for(auto& pv: Lk_){
+		    for(auto& p: pv){
+		        if(name == p.name()){
+		            p.setAsso(i);
+		            if(debug)
+		                std::cout << p.name() << " " << p.getAssoEstimateName() <<" "<< i << std::endl;
+		        }
+		    }
 		}
 	}
 }
@@ -606,8 +619,9 @@ void measurement::setup(){
 	if(est_corr_.size() && H_.size())
 		throw std::runtime_error("measurement::setup: hessian and direct estimate correlations provided. don't know what to chose");
 
+	std::vector<parameter> lambdas; //just a helper
+	std::vector<TString> kappanames;
 
-	lambdas_.clear();
 	x_.clear();
 	M_.clear();
 	kappa_.clear();
@@ -629,7 +643,7 @@ void measurement::setup(){
 		else{
 			nlamb++;
 			if(H_.getEntryIndexUS(p.name())<SIZE_MAX){
-				lambdas_.push_back(p);
+			    lambdas.push_back(p);
 				nHlamb++;
 			}
 		}
@@ -638,6 +652,7 @@ void measurement::setup(){
 
 	M_.resize(nHest,std::vector<double>(nHest,0));
 	kappa_.resize(nHest,std::vector<double>(nHlamb,0));
+	kappanames.resize(nHlamb,"");
 	tildeC_.resize(nHlamb,std::vector<double>(nHlamb,0));
 
 	//order H in syst and estimates
@@ -645,12 +660,12 @@ void measurement::setup(){
 	for(const auto& x:x_){
 		neworder.push_back(x.name());
 	}
-	for(const auto& s:lambdas_){
+	for(const auto& s:lambdas){
 		neworder.push_back(s.name());
 	}
 
 	if(debug)
-		std::cout << "measurement::setup: reorder Hessian" <<std::endl; //DEBUG
+		std::cout << "measurement::setup: reorder Hessian" <<std::endl;
 
 	H_.reOrder(neworder);
 	//fill Hessian parts
@@ -658,8 +673,10 @@ void measurement::setup(){
 		for(size_t j=0;j<H_.size();j++){
 			if(i<nHest && j<nHest)
 				M_.at(i).at(j)=H_.getEntry(i,j);
-			if(i<nHest && j>=nHest)
+			if(i<nHest && j>=nHest){
 				kappa_.at(i).at(j-nHest)=H_.getEntry(i,j);
+				kappanames.at(j-nHest)=H_.getEntryName(j);
+			}
 			if(i>=nHest && j>=nHest)
 				tildeC_.at(i-nHest).at(j-nHest)=H_.getEntry(i,j);
 		}
@@ -667,7 +684,7 @@ void measurement::setup(){
 
 
 	if(debug)
-		std::cout << "measurement::setup: add externalised" <<std::endl; //DEBUG
+		std::cout << "measurement::setup: add externalised" <<std::endl;
 	//add rest
 	for(const auto& p:paras_){
 		if(p.getType() == parameter::para_estimate){
@@ -676,7 +693,7 @@ void measurement::setup(){
 		}
 		else{
 			if(H_.getEntryIndexUS(p.name())==SIZE_MAX)
-				lambdas_.push_back(p);
+			    lambdas.push_back(p);
 		}
 	}
 
@@ -691,7 +708,7 @@ void measurement::setup(){
 
 
 	if(debug)
-		std::cout << "measurement::setup: fill LM" <<std::endl; //DEBUG
+		std::cout << "measurement::setup: fill LM" <<std::endl;
 
 	//fill LM_
 	for(size_t i=0;i<x_.size();i++){
@@ -710,7 +727,7 @@ void measurement::setup(){
 
 
 	if(debug)
-		std::cout << "measurement::setup: calculate Lk_" <<std::endl; //DEBUG
+		std::cout << "measurement::setup: calculate Lk_" <<std::endl;
 	//calculate for the inputs from Hessians
 	/*
 	 * *** calculate ks from initial Hessian part kappa
@@ -741,16 +758,18 @@ void measurement::setup(){
 		TVectorT< double> ki= TM * vec;
 		for(size_t mu=0;mu<M_.size();mu++){
 			Lk_.at(mu).at(i)=uncertainty(-ki[mu],ki[mu]);
+			Lk_.at(mu).at(i).setName(kappanames.at(i));
+			Lk_.at(mu).at(i).setAssoEstimateName(H_.getEntryName(mu));
 		}
 	}
 
 
 	if(debug)
-		std::cout << "measurement::setup: fill external Lk" <<std::endl; //DEBUG
+		std::cout << "measurement::setup: fill external Lk" <<std::endl;
 
 	//fill the rest of Lks // LD remains 0 for them
 	for(size_t i=kssize;i<nlamb;i++){ //USE THE MATRIX HERE> >>>> >>>>
-		size_t exidxi= c_external_.getEntryIndexUSCol(lambdas_.at(i).name());
+		size_t exidxi= c_external_.getEntryIndexUSCol(lambdas.at(i).name());
 		for(size_t mu=0;mu<nest;mu++){
 			size_t exidxmu = c_external_.getEntryIndexUSRow(x_.at(mu).name());
 			Lk_.at(mu).at(i)=c_external_.getEntry(exidxmu,exidxi);
@@ -759,7 +778,7 @@ void measurement::setup(){
 
 
 	if(debug)
-		std::cout << "measurement::setup: create LD" <<std::endl; //DEBUG
+		std::cout << "measurement::setup: create LD" <<std::endl;
 
 	//fill only the first rows and cos of LD_. rest remains 0
 	//all Lk_ here are symmetric by construction
@@ -820,11 +839,9 @@ void measurement::setup(){
 	for(const auto& p:x_){
 	    normalisation_+=p.getNominalVal();
 	}
-    //debug
 
-	//DEBUG
 	if(debug){
-		std::cout << "H:\n" << H_<<std::endl;
+		std::cout << "after setup\nH:\n" << H_<<std::endl;
 		std::cout << "M: " << M_<<std::endl;
 		std::cout << "kappa: " << kappa_<<std::endl;
 		std::cout << "C_tilde: " << tildeC_<<'\n'<<std::endl;
@@ -840,13 +857,14 @@ void measurement::setup(){
 
 
 double measurement::evaluate(const double* pars, double* df, const bool& pearson, const size_t& maxidx)const{
-	if(!setup_)
+	if(!setup_ || !Lk_.size())
 		throw std::runtime_error("measurement::evaluate: first call setup()");
 	//cannot be done automatically since this function needs to be const
 
-	const size_t nlamb=lambdas_.size();
+	const size_t nlamb=Lk_.at(0).size();
 	const size_t nx=x_.size();
 
+	// heavy_debug=true ; //DEBUG
 
 	//std::cout << "eval" <<std::endl;
 
@@ -883,15 +901,19 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
             x_comb_mu*=normalisation_;
 		 */
 
+
 		for(size_t i=0;i<nlamb;i++){
-			if(! lambdas_.at(i).isRelative()) continue;
-			double lambda_i = lambdas_.at(i).getParVal(x_.at(mu).getAsso(),pars,maxidx);//   pars[lambdas_.at(i).getAsso()];
-			x_comb_mu *= (1 - Lk_.at(mu).at(i).eval(lambda_i)/x_meas_mu);
+			if(! Lk_.at(mu).at(i).isRelative()) continue;
+			double lambda_i = Lk_.at(mu).at(i).eval(pars);//   pars[lambdas_.at(i).getAsso()];
+			x_comb_mu *= (1. - lambda_i/x_meas_mu);
 		}
 		for(size_t i=0;i<nlamb;i++){
-			if(lambdas_.at(i).isRelative()) continue;
-			double lambda_i = lambdas_.at(i).getParVal(x_.at(mu).getAsso(),pars,maxidx);
-			x_comb_mu -= Lk_.at(mu).at(i).eval(lambda_i);
+			if(Lk_.at(mu).at(i).isRelative()) continue;
+			double lambda_i = Lk_.at(mu).at(i).eval(pars);
+			x_comb_mu -= lambda_i;
+            if(heavy_debug)
+                std::cout << "unc (mu,i)" << mu << "," << i << ": "<<  Lk_.at(mu).at(i).getAssoEstimateName()<<","<< Lk_.at(mu).at(i).name()
+                << ", (main para, sub para) " << Lk_.at(mu).at(i).getAsso() << ","<< Lk_.at(mu).at(i).getSubParaAsso() << std::endl;
 		}
 
 		for(size_t nu=mu;nu<nx;nu++){
@@ -909,14 +931,14 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 	            x_comb_nu*=normalisation_;
 			 */
 			for(size_t i=0;i<nlamb;i++){
-				if(! lambdas_.at(i).isRelative()) continue;
-				double lambda_i = lambdas_.at(i).getParVal(x_.at(nu).getAsso(),pars,maxidx);
-				x_comb_nu *= (1 - Lk_.at(nu).at(i).eval(lambda_i)/x_meas_nu);
+				if(! Lk_.at(nu).at(i).isRelative()) continue;
+				double lambda_i = Lk_.at(nu).at(i).eval(pars);
+				x_comb_nu *= (1. - lambda_i/x_meas_nu);
 			}
 			for(size_t i=0;i<nlamb;i++){
-				if(lambdas_.at(i).isRelative()) continue;
-				double lambda_i = lambdas_.at(i).getParVal(x_.at(nu).getAsso(),pars,maxidx);
-				x_comb_nu -= Lk_.at(nu).at(i).eval(lambda_i);
+				if(Lk_.at(nu).at(i).isRelative()) continue;
+				double lambda_i = Lk_.at(nu).at(i).eval(pars);
+				x_comb_nu -= lambda_i;
 			}
 
 			double contribution = (x_meas_mu - x_comb_mu) * LM_.at(mu).at(nu) * (x_meas_nu - x_comb_nu);
@@ -939,12 +961,14 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 
 	double copart=0;
 	//lambda^2 - symmetric in lambda
+	//Lk_ is block matrix
+	//this is w.r.t. the SOURCE of UNC
 	for(size_t i=0;i<nlamb;i++){
-		double lambda_i = pars[lambdas_.at(i).getAsso()];
+		double lambda_i = Lk_.at(0).at(i).getsqrtpenalty(pars);
 		for(size_t j=i;j<nlamb;j++){
 
 
-			double lambda_j = pars[lambdas_.at(j).getAsso()];
+			double lambda_j = Lk_.at(0).at(j).getsqrtpenalty(pars);
 
 			double contribution=lambda_i * lambda_j * LD_.at(i).at(j);
 
@@ -954,10 +978,16 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 		}
 	}
 
+	double uncofuncpen=0;
+	//unc of  unc
+	for(const auto& pv:Lk_)
+	    for(const auto& p:pv)
+	        uncofuncpen+=p.getUncOfUncPenalty(pars);
+
 
 	if(xsqpart != xsqpart  || copart!=copart){
-		for(size_t i=0;i<lambdas_.size();i++){
-			std::cout << lambdas_.at(i).name() <<" "<< pars[lambdas_.at(i).getAsso()] << std::endl;
+		for(size_t i=0;i<nlamb;i++){
+			std::cout << Lk_.at(0).at(i).name() <<" "<< Lk_.at(0).at(i).getsqrtpenalty(pars) << std::endl;
 		}
 		for(size_t i=0;i<x_.size();i++){
 			std::cout << x_.at(i).name() <<" "<< pars[x_.at(i).getAsso()]<< std::endl;
@@ -969,8 +999,7 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 	}
 
 
-
-	double out=xsqpart + copart;
+	double out=xsqpart + copart + uncofuncpen;
 
 	return out;
 }
@@ -998,7 +1027,7 @@ void measurement::copyFrom(const measurement& r){
 	LM_=r.LM_;
 	Lk_=r.Lk_;
 	LD_=r.LD_;
-	lambdas_=r.lambdas_;
+	//lambdas_=r.lambdas_;
 	x_=r.x_;
 	c_external_=r.c_external_;
 	est_corr_=r.est_corr_;
