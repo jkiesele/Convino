@@ -1,0 +1,45 @@
+pre-combine systematics correlations:
+syst_a 1      0.5    
+syst_1 0.5    1      
+
+post-combine systematics correlations:
+multiplied by: 100
+syst_a 100    97.78  
+syst_1 97.78  100    
+
+pre-combine estimate correlations:
+
+post-combine result correlations:
+comb_0 1      0.927  0.934  0.93   0.892  
+comb_1 0.927  1      0.96   0.956  0.917  
+comb_2 0.934  0.96   1      0.963  0.924  
+comb_3 0.93   0.956  0.963  1      0.919  
+comb_4 0.892  0.917  0.924  0.919  1      
+
+post-combine result covariance:
+multiplied by: 0.001
+comb_0 0.435  0.905  1.291  0.966  0.357  
+comb_1 0.905  2.191  2.981  2.229  0.825  
+comb_2 1.291  2.981  4.4    3.181  1.178  
+comb_3 0.966  2.229  3.181  2.482  0.881  
+comb_4 0.357  0.825  1.178  0.881  0.37   
+
+combined (minimum chi^2=3.36151):
+comb_0: 89.5731 +20.8483 -19.3287
+comb_1: 217.621 +46.8077 -44.2221
+comb_2: 312.277 +66.3336 -62.866
+comb_3: 218.4 +49.8245 -46.3887
+comb_4: 93.5555 +19.2243 -18.3147
+full correlation matrix:
+syst_a 1      0.978  0.942  0.969  0.976  0.971  0.933  
+syst_1 0.978  1      0.946  0.973  0.979  0.976  0.935  
+comb_0 0.942  0.946  1      0.927  0.934  0.93   0.892  
+comb_1 0.969  0.973  0.927  1      0.96   0.956  0.917  
+comb_2 0.976  0.979  0.934  0.96   1      0.963  0.924  
+comb_3 0.971  0.976  0.93   0.956  0.963  1      0.919  
+comb_4 0.933  0.935  0.892  0.917  0.924  0.919  1      
+
+
+Name       pull   constraint
+syst_a  -0.3   0.96
+syst_1  -0.5   0.54
