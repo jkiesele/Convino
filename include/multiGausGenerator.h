@@ -17,7 +17,7 @@
 class TRandom3;
 class multiGausGenerator{
 public:
-    multiGausGenerator(int seed=0);
+    multiGausGenerator(int seed=123);
     ~multiGausGenerator();
 
     void setCovariance(const triangularMatrix& m);
