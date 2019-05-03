@@ -687,7 +687,6 @@ combinationResult combiner::combinePriv(){
         //m.setup();
     }
 
-    npars_=fitparas.size();
     nest_=tobecombined_.size();
     std::vector<double> steps(fitparas.size(),1);//remove in the end
 
@@ -711,7 +710,7 @@ combinationResult combiner::combinePriv(){
      * Add uncertainties of uncertainties
      */
 
-    size_t n_uncofunc=0;
+    n_uncofunc_=0;
     for(auto& m:measurements_){
         auto& lk = m.getFullUncMatrix();
         for(auto & kv:lk){
@@ -721,7 +720,7 @@ combinationResult combiner::combinePriv(){
                     names.push_back(k.getAssoEstimateName()+","+k.name());
                     k.setSubParaAsso(fitparas.size()-1);
                     steps.push_back(sqrt(k.getUncSigmaSq()));
-                    n_uncofunc++;
+                    n_uncofunc_++;
                     if(debug)
                         std::cout << "associated sub para for " << k <<": "<< fitparas.size()-1<< std::endl;
                 }
@@ -731,6 +730,7 @@ combinationResult combiner::combinePriv(){
 
 
 
+    npars_=fitparas.size();
     /*
      *********   Configure the fitter and do the fit
      */
@@ -748,7 +748,7 @@ combinationResult combiner::combinePriv(){
     fitfunctionGradient func(this);
     fitter.setMinFunction(func);
     const size_t nsyst=nsys;
-    const size_t ncomb=fitter.getParameters()->size()-nsyst-n_uncofunc;
+    const size_t ncomb=fitter.getParameters()->size()-nsyst-n_uncofunc_;
     if(debug)
         simpleFitter::printlevel=2;
 
@@ -858,7 +858,7 @@ combinationResult combiner::combinePriv(){
     }
 
     out.post_sys_correlations_=external_correlations_;
-    for(size_t i=0;i<nsyst+n_uncofunc;i++){
+    for(size_t i=0;i<nsyst+n_uncofunc_;i++){
         out.pulls_.push_back(fitter.getParameter(i));
         out.constraints_.push_back(fitter.getParameterErr(i));
         if(i<nsyst)

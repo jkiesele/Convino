@@ -35,7 +35,7 @@ class fitfunctionBase;
 class combiner{
     friend class fitfunctionBase;
 public:
-    combiner():lh_mod_(lh_mod_neyman),npars_(0),nest_(0),
+    combiner():lh_mod_(lh_mod_neyman),npars_(0),nest_(0),n_uncofunc_(0),
     lowestchi2_(1e19),isdifferential_(false),
     normalised_input_(false),
     excludebin_(-1),
@@ -219,7 +219,7 @@ private:
 
     void clear();
 
-    size_t npars_,nest_;
+    size_t npars_,nest_,n_uncofunc_;
 
     std::vector<correlationscan> syst_scanranges_;
     correlationMatrix external_correlations_;

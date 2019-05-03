@@ -46,7 +46,7 @@ void fitfunctionBase::eval(const double*x, double& f, double* df)const{
 	//    double combsumdiff = 1. - meass.at(0).getCombSum(x);
 	//    f_int+= c->auglagrangemu_/2. * combsumdiff * combsumdiff  - c->auglagrangelambda_ * combsumdiff ;
 	//}
-	const size_t nsys=c->npars_-c->nest_;
+	const size_t nsys=c->npars_-c->nest_-c->n_uncofunc_;
 
 	const double sqrt2 = std::sqrt(2);
 
