@@ -101,10 +101,16 @@ public:
     ///// ----- helpers for text-based interface -----
     void readConfigFile(const std::string & filename);
 
+
+    void addToImpactTable(const TString& impactdescription, const std::vector<TString>& contributing_uncertatinties);
+
     /**
      * can be used to read-in correlations from an external file for text based and C++ interface
      */
     void readCorrelationFile(const std::string & filename, bool requiremarkers=false);
+
+
+    void readImpactFile(const std::string & filename, bool requiremarkers=false);
 
     std::vector<std::vector<combinationResult> >
     scanCorrelations(std::ostream& out, const combinationResult& nominal, const std::string& outdir="")const;
@@ -228,6 +234,7 @@ private:
     std::vector<measurement> measurements_;
     std::vector<parameter>  allparas;
     std::vector<std::pair< TString, std::vector<TString> > > tobecombined_;
+    std::vector<std::pair< TString, std::vector<TString> > > impacttable_;
 
 
     //measurement allmeas_;

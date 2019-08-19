@@ -84,7 +84,7 @@ fileReader::read_return fileReader::readFilePriv(const std::string& filename){
 				lines_.at(0).push_back(s);
 				continue;
 			}
-			else{
+			else if(started){
 			    std::string externalmarker="#!FILE";
 			    if(s.size()>6 && s.find(externalmarker) != std::string::npos){
 			        textFormatter tf;
@@ -169,9 +169,9 @@ fileReader::read_return fileReader::readFilePriv(const std::string& filename){
 }
 
 
-void fileReader::readFile(const std::string &filename){
+void fileReader::readFile(const std::string &filename, bool allowempty){
 	read_return ret=readFilePriv(filename);
-	if(ret==read_nomarker)
+	if(ret==read_nomarker && !allowempty)
 		throw std::runtime_error("fileReader::readFile: marker ended by "+ end_ +" set but never reached.");
 	if(ret==read_failed)
 		throw std::runtime_error("fileReader::readFile: read failed for "+filename +". Check if file exists");

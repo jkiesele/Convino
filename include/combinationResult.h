@@ -13,6 +13,7 @@
 #include <vector>
 #include <stdexcept>
 #include <iostream>
+#include <algorithm>
 
 class TH1;
 class TGraphAsymmErrors;
@@ -57,6 +58,10 @@ public:
 	 * object. This can be either cout or a file (fstream)
 	 */
 	void printFullInfo(std::ostream& out)const;
+
+
+
+	void printImpactTable(std::ostream& out)const;
 
 	/**
 	 * Fills the combination result to a ROOT TH1
@@ -194,6 +199,7 @@ public:
 protected:
 	std::vector<TString> combnames_;
 	std::vector<double> combined_, comberrup_,comberrdown_;
+	std::vector<std::pair< TString, std::vector<double> > > impacttable_;
 	correlationMatrix orig_sys_correlations_;
 	correlationMatrix orig_meas_correlations_;
 	correlationMatrix post_sys_correlations_,post_meas_correlations_,post_all_correlations_;

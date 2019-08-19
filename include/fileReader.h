@@ -50,7 +50,7 @@ public:
     std::string & trimcomments(std::string & str) const;
 	 */
 
-	void readFile(const std::string& filename);
+	void readFile(const std::string& filename, bool allowempty=false);
 
 	void addFromFile(const std::string& filename);
 

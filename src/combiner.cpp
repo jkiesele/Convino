@@ -169,9 +169,10 @@ void combiner::readConfigFile(const std::string & filename){
 
     readCorrelationFile(configfile_, true);
 
-
+    readImpactFile(configfile_, true);
 
 }
+//[uncertainty impacts]
 
 void combiner::readCorrelationFile(const std::string & filename, bool requiremarkers){
     fileReader fr;
@@ -254,6 +255,42 @@ void combiner::readCorrelationFile(const std::string & filename, bool requiremar
     }
 }
 
+void combiner::readImpactFile(const std::string & filename, bool requiremarkers){
+    fileReader fr;
+    if(requiremarkers){
+        fr.setStartMarker("[uncertainty impacts]");
+        fr.setEndMarker("[end uncertainty impacts]");
+    }
+    fr.setDelimiter("=");
+    fr.readFile(filename,true);//allow empty
+    textFormatter tf;
+    tf.setDelimiter(",");
+    tf.setComment("#");
+    for(size_t l=0;l<fr.nLines();l++){
+        if(fr.nEntries(l)<2) continue;
+        auto sumimpact = fr.getData<TString>(l,0);
+        auto impactof = tf.getFormatted(fr.getData<std::string>(l,1));
+        std::vector<TString> tvec;
+        for(const auto& u: impactof)
+            tvec.push_back(u.data());
+        if(debug)
+            std::cout << "added impact of " << sumimpact << " consisting of " << tvec << std::endl;
+        addToImpactTable(sumimpact, tvec);
+    }
+
+}
+
+
+void combiner::addToImpactTable(const TString& impactdescription, const std::vector<TString>& contributing_uncertatinties){
+    for(const auto& i : impacttable_){
+        if(i.first == impactdescription)
+            throw std::logic_error(("combiner::addToImpactTable: "+ impactdescription + " already added").Data());
+    }
+
+    impacttable_.push_back(std::pair<TString, std::vector<TString> >(impactdescription,
+            contributing_uncertatinties));
+}
+
 void combiner::addMeasurement( measurement m){
     m.setup();
     if(measurements_.size()<1){
@@ -285,6 +322,18 @@ void combiner::checkConsistency()const{
     if(!isdifferential_ && normalised_input_)
         throw std::logic_error("Input marked as not differential but as normalised. Please check consistency of input configuration");
 
+    //check impacttable_ if all uncertainties exist
+    for(const auto& i: impacttable_){
+        for(const auto& in: i.second){
+            bool found=false;
+            for(const auto& p: allparas){
+                if(in == p.name())
+                    found=true;
+            }
+            if(!found)
+                throw std::logic_error(("combiner::checkConsistency: uncertainty "+in+ " from impact table not found").Data());
+        }
+    }
 }
 
 
@@ -909,6 +958,38 @@ combinationResult combiner::combinePriv(){
     }
 
     out.excludebin_ = excludebin_;
+
+    if(debug)
+        std::cout << "evaluating impacts" <<std::endl;
+    simpleFitter::printlevel=2;
+    for(const auto& i:impacttable_){
+
+        for(size_t p=0;p<fitter.getParameters()->size();p++)
+            fitter.setParameterFixed(p,false);
+        for(const auto& uncname: i.second)
+            fitter.setParameterFixed(uncname,true);
+        fitter.fit();
+        if(!fitter.wasSuccess()){
+            throw std::runtime_error("combiner::combine: impact fit not successful");
+        }
+        std::vector<double> impacts;
+        for(size_t i=0;i<ncomb;i++){
+            size_t idx=nsyst+i;
+            double diff     = fitter.getParameter(idx) - out.combined_.at(i);
+            double updiffsq   = out.comberrup_.at(i)  *out.comberrup_.at(i)   - fitter.getParameterErrUp()->at(idx)  *fitter.getParameterErrUp()->at(idx);
+            double downdiffsq = out.comberrdown_.at(i)*out.comberrdown_.at(i) - fitter.getParameterErrDown()->at(idx)*fitter.getParameterErrDown()->at(idx);
+            double upsign=1,downsign=1;
+            if(updiffsq<0)
+                upsign=-1;
+            if(downdiffsq)
+                downsign=-1;
+            double totsign = upsign*downsign;
+            if(upsign==(double)-1.)
+                totsign=-1;
+            impacts.push_back( totsign  * std::max(std::sqrt(updiffsq* upsign),std::sqrt(downdiffsq* downsign)));
+        }
+        out.impacttable_.push_back(std::pair<TString,std::vector<double> >(i.first, impacts));
+    }
 
     if(normalisewithtoys_){
         normaliser normer;

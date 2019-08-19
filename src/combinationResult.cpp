@@ -11,6 +11,7 @@
 #include "textFormatter.h"
 #include "helpers.h"
 
+
 combinationResult::combinationResult():chi2min_(0),isdifferential_(false),excludebin_(-1){}
 
 void combinationResult::printResultOnly(std::ostream& out)const{
@@ -62,6 +63,27 @@ void combinationResult::printFullInfo(std::ostream& out)const{
         out << textFormatter::fixLength(toString(pulls_.at(i)),4) << "   ";
         out << textFormatter::fixLength(toString(constraints_.at(i)),4) << std::endl;
     }
+    out << std::endl;
+    printImpactTable(out);
+
+}
+
+void combinationResult::printImpactTable(std::ostream& out)const{
+    out  << "Impact table: name, impact [%]" <<std::endl;
+    out << textFormatter::fixLength(" ",15) <<" ";
+    for(size_t c=0;c<combined_.size();c++){
+        out << textFormatter::fixLength(combnames_.at(c).Data(), 15) <<" | ";
+    }
+    out << std::endl;
+    for(const auto& i:impacttable_){
+        out << textFormatter::fixLength(i.first.Data(),15) << " ";
+        for(size_t c=0;c<combined_.size();c++){
+            double rel = fabs(i.second.at(c) / combined_.at(c))*100.;
+            out << textFormatter::fixLength(toString(rel),15) << " | ";
+        }
+        out << std::endl;
+    }
+
 
 }
 

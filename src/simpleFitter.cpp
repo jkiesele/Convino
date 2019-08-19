@@ -571,6 +571,9 @@ void simpleFitter::copyFrom(const simpleFitter& rhs){
 	minossuccessful_=false;
 	tolerance_=rhs.tolerance_ ;
 	functobemin_=rhs.functobemin_;
+	gradfunctobemin_=rhs.gradfunctobemin_;
+	basefunctobemin_=rhs.basefunctobemin_;
+
 	pminimizer_=0;
 	strategy_=rhs.strategy_;
 }
