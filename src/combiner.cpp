@@ -655,11 +655,34 @@ combinationResult combiner::combinePriv(){
         }
     }
 
+    std::vector<TString> spectators_;
+    for(auto& m:measurements_){
+        for(const auto& est: m.getEstimateNames()){
+            bool namefound=false;
+            for(size_t i=0;i<tobecombined_.size();i++){
+                if(std::find(tobecombined_.at(i).second.begin(),tobecombined_.at(i).second.end(),est) != tobecombined_.at(i).second.end()){
+                    namefound=true;
+                    break;
+                }
+            }
+            if(!namefound){
+                spectators_.push_back(est);
+                associate(est,est);
+            }
+        }
+    }
+    if(spectators_.size()>0){
+        std::cout << "combiner::combine: Not all estimates have been chosen to be combined, adding the following as spectators: ";
+        for(const auto s:spectators_)
+            std::cout << s << " ";
+        std::cout << std::endl;
+    }
+
+
 
     const size_t nsys=external_correlations_.size();
 
     std::vector<double>fitparas(nsys, 0);
-
 
     for(size_t i=0;i<tobecombined_.size();i++){
         double mean=0;
@@ -680,6 +703,9 @@ combinationResult combiner::combinePriv(){
 
         fitparas.push_back(mean);
     }
+
+
+
 
     for(auto& m:measurements_){
         m.associateAllLambdas(external_correlations_); //get lamda indecies right
@@ -717,9 +743,10 @@ combinationResult combiner::combinePriv(){
     fitter.setOnlyRunDummy(dummyrun_);
     fitter.setParameters(fitparas,steps);
     for(size_t i=0;i<fitparas.size();i++){
-        if(i>=nsys){
-            fitter.setAsMinosParameter(i,true); //use minos for all quantities to be combined
-            //	fitter.setParameterLowerLimit(i,0); //let in for now
+        if(i>=nsys && std::find(spectators_.begin(),spectators_.end(),names.at(i)) == spectators_.end()){
+            fitter.setAsMinosParameter(i,true);
+            //use minos for all quantities to be combined but not for spectators
+
         }
     }
     fitter.setParameterNames(names);

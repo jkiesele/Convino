@@ -105,6 +105,11 @@ void simpleFitter::setParameterFixed(size_t idx,bool fixed){
 	parafixed_.at(idx)=fixed;
 }
 
+
+void simpleFitter::setParameterFixed(const TString& paraname,bool fixed){
+    setParameterFixed(findParameterIdx(paraname),fixed);
+}
+
 void simpleFitter::setParameterLowerLimit(size_t idx,double value){
 	if(idx >= paras_.size())
 		throw std::out_of_range("simpleFitter::setParameterLowerLimit: index out of range");

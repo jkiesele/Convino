@@ -53,6 +53,7 @@ public:
 
 	void setParameter(size_t idx,double value);
 	void setParameterFixed(size_t idx,bool fixed=true);
+    void setParameterFixed(const TString& paraname,bool fixed=true);
 	void setParameterLowerLimit(size_t idx,double value);
 	void setParameterUpperLimit(size_t idx,double value);
 	void removeParameterLowerLimit(size_t idx);
