@@ -673,6 +673,13 @@ combiner::scanExcludeBins(std::ostream& out, const combinationResult& nominal)co
 }
 
 
+void combiner::setFastMode(bool fm){
+    fastmode_=fm;
+    if(fastmode_){
+        std::cout << "combiner::setFastMode: printed hessian/covariance will be unreliable! Use with caution. (results are identical)" <<std::endl;
+    }
+}
+
 combinationResult combiner::combine()const{
     if(measurements_.size()<1)
         throw std::logic_error("combiner::combine: no measurement to combine associated");
@@ -804,7 +811,7 @@ combinationResult combiner::combinePriv(){
     const size_t nsyst=nsys;
     const size_t ncomb=fitter.getParameters()->size()-nsyst ;
     if(debug)
-        simpleFitter::printlevel=2;
+        simpleFitter::printlevel=0;
 
     /*
      * Make a first rough fit to get better starting values.
@@ -862,7 +869,8 @@ combinationResult combiner::combinePriv(){
     //fitter.setFastMode(true);
     //fitter.fit();
     //fitter.feedErrorsToSteps();
-    //fitter.setFastMode(false);
+
+    fitter.setFastMode(fastmode_);
     fitter.setStrategy(2);
     fitter.setTolerance(0.1);
     if(debug)
@@ -961,23 +969,24 @@ combinationResult combiner::combinePriv(){
 
     if(debug)
         std::cout << "evaluating impacts" <<std::endl;
-    simpleFitter::printlevel=2;
-    for(const auto& i:impacttable_){
 
-        for(size_t p=0;p<fitter.getParameters()->size();p++)
-            fitter.setParameterFixed(p,false);
+    for(const auto& i:impacttable_){
+        simpleFitter fittercp (fitter);
+        fittercp.setFastMode(true);
+
         for(const auto& uncname: i.second)
-            fitter.setParameterFixed(uncname,true);
-        fitter.fit();
-        if(!fitter.wasSuccess()){
+            fittercp.setParameterFixed(uncname,true);
+
+        fittercp.fit();
+        if(!fittercp.wasSuccess()){
             throw std::runtime_error("combiner::combine: impact fit not successful");
         }
         std::vector<double> impacts;
         for(size_t i=0;i<ncomb;i++){
             size_t idx=nsyst+i;
-            double diff     = fitter.getParameter(idx) - out.combined_.at(i);
-            double updiffsq   = out.comberrup_.at(i)  *out.comberrup_.at(i)   - fitter.getParameterErrUp()->at(idx)  *fitter.getParameterErrUp()->at(idx);
-            double downdiffsq = out.comberrdown_.at(i)*out.comberrdown_.at(i) - fitter.getParameterErrDown()->at(idx)*fitter.getParameterErrDown()->at(idx);
+            double diff     = fittercp.getParameter(idx) - out.combined_.at(i);
+            double updiffsq   = out.comberrup_.at(i)  *out.comberrup_.at(i)   - fittercp.getParameterErrUp()->at(idx)  *fittercp.getParameterErrUp()->at(idx);
+            double downdiffsq = out.comberrdown_.at(i)*out.comberrdown_.at(i) - fittercp.getParameterErrDown()->at(idx)*fittercp.getParameterErrDown()->at(idx);
             double upsign=1,downsign=1;
             if(updiffsq<0)
                 upsign=-1;

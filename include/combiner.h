@@ -39,6 +39,7 @@ public:
     normalised_input_(false),
     excludebin_(-1),
     normaliseinfit_(false),normalisewithtoys_(false),
+    fastmode_(false),
     auglagrangemu_(1),auglagrangelambda_(1){}
     ~combiner(){clear();}
     enum lh_mod{lh_mod_neyman,lh_mod_pearson};
@@ -89,6 +90,7 @@ public:
     }
 
 
+    void setFastMode(bool fm);
     /**
      * Starts the combination procedure and returns a
      * combinationResult object that stores the result of the
@@ -255,6 +257,7 @@ private:
     static const double maxcorr_;
 
     static bool dummyrun_;//< for debugging purposes
+    bool fastmode_;
 
 
     double auglagrangemu_,auglagrangelambda_;

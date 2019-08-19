@@ -21,7 +21,11 @@ void combinationResult::printResultOnly(std::ostream& out)const{
         << " +"<<comberrup_.at(i) << " " << comberrdown_.at(i) << std::endl;
 
     //calculate simple weight of each measurement
-    post_meas_covariance_.clear();
+
+    if(impacttable_.size()){
+        out << std::endl;
+        printImpactTable(out);
+    }
 }
 
 void combinationResult::printSimpleInfo(std::ostream& out)const{
@@ -63,9 +67,10 @@ void combinationResult::printFullInfo(std::ostream& out)const{
         out << textFormatter::fixLength(toString(pulls_.at(i)),4) << "   ";
         out << textFormatter::fixLength(toString(constraints_.at(i)),4) << std::endl;
     }
-    out << std::endl;
-    printImpactTable(out);
-
+    if(impacttable_.size()){
+        out << std::endl;
+        printImpactTable(out);
+    }
 }
 
 void combinationResult::printImpactTable(std::ostream& out)const{

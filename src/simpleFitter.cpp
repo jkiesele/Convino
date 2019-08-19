@@ -230,7 +230,7 @@ void simpleFitter::fit(){
 			paraname=paranames_.at(i);
 		else
 			paraname=(TString)"par"+(i);
-		if(! fastmode_ && std::find(minospars_.begin(),minospars_.end(),i) != minospars_.end()){
+		if(std::find(minospars_.begin(),minospars_.end(),i) != minospars_.end()){
 
 			if(errs && !pminimizer_->GetMinosError(i, paraerrsdown_.at(i), paraerrsup_.at(i))){
 				paraerrsdown_.at(i)=-errs[i];
@@ -553,29 +553,43 @@ bool simpleFitter::checkSizes()const{
 
 void simpleFitter::copyFrom(const simpleFitter& rhs){
 	if(this==&rhs) return;
-	chi2min_=1e6;
 
-	paras_=rhs.paras_ ;
+	chi2min_=rhs.chi2min_;
 
-	stepsizes_=rhs.stepsizes_ ;
-	paraerrsup_=rhs.paraerrsup_ ;
-	paraerrsdown_=rhs.paraerrsdown_ ;
-	paranames_=rhs. paranames_;
-	parafixed_=rhs.parafixed_ ;
-	paracorrs_=rhs.paracorrs_ ;
-	minospars_=rhs.minospars_ ;
+	paras_=rhs.paras_;
+	stepsizes_=rhs.stepsizes_;
+	paraerrsup_=rhs.paraerrsup_;
+	paraerrsdown_=rhs.paraerrsdown_;
+	paranames_=rhs.paranames_;
+	parafixed_=rhs.parafixed_;
+
+
+	paracorrs_=rhs.paracorrs_;
+	hessian_=rhs.hessian_;
+
+	minospars_=rhs.minospars_;
 	lowerlimits_=rhs.lowerlimits_;
 	upperlimits_=rhs.upperlimits_;
-	maxcalls_=rhs.maxcalls_ ;
-	minsuccessful_=false;
-	minossuccessful_=false;
-	tolerance_=rhs.tolerance_ ;
+
+	maxcalls_=rhs.maxcalls_;
+
+
+	minsuccessful_=rhs.minsuccessful_;
+	minossuccessful_=rhs.minossuccessful_;
+
+	tolerance_=rhs.tolerance_;
 	functobemin_=rhs.functobemin_;
 	gradfunctobemin_=rhs.gradfunctobemin_;
 	basefunctobemin_=rhs.basefunctobemin_;
 
-	pminimizer_=0;
+	pminimizer_=0;//gets recreated
+
 	strategy_=rhs.strategy_;
+	dummyrun_=rhs.dummyrun_;
+	fastmode_=rhs.fastmode_;
+
+	type_=rhs.type_;
+
 }
 
 ROOT::Math::Minimizer * simpleFitter::invokeMinimizer()const{

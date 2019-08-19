@@ -33,6 +33,7 @@ void coutHelp(){
 	std::cout << "\n--prefix <pref> define a prefix for the output files/directories\n";
     std::cout << "\n--excludebin <bin> force specific exclude bin\n";
     std::cout << "\n--neyman        use neyman chi2 (faster)\n";
+    std::cout << "\n--fast          switches on fast mode (no covariance output)\n";
 	std::cout << std::endl;
 	std::cout << "EXAMPLE: convino -sp examples/exampleconfig.txt" <<std::endl;
 	std::cout << std::endl;
@@ -64,6 +65,8 @@ int main(int argc, char* argv[]){
 		                }
 		    else if(targv == ("--neyman"))
 				comb.setMode(combiner::lh_mod_neyman);
+            else if(targv == ("--fast"))
+                comb.setFastMode(true);
 		    else if(targv == ("--prefix")){
 				if(i+1>=argc || ((TString)argv[i+1]).BeginsWith("-")){
 					std::cerr << "please specify a valid prefix, e.g. --prefix <prefix>" <<std::endl;
