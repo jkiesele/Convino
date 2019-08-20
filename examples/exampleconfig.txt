@@ -77,8 +77,8 @@ The other blocks are commented individually
     # The resulting table of uncertainties does not represent independent uncertainty groups
     # and serves as illustration, only.
     
-    a_unc = sys_a1, sys_a2, sys_a3
-    b_unc = sys_b1, sys_b2, sys_b3
+    a_unc = sys_a1 + sys_a2 + sys_a3
+    b_unc = sys_b1 + sys_b2 + sys_b3
 
 [end uncertainty impacts]
 

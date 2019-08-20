@@ -264,7 +264,7 @@ void combiner::readImpactFile(const std::string & filename, bool requiremarkers)
     fr.setDelimiter("=");
     fr.readFile(filename,true);//allow empty
     textFormatter tf;
-    tf.setDelimiter(",");
+    tf.setDelimiter("+");
     tf.setComment("#");
     for(size_t l=0;l<fr.nLines();l++){
         if(fr.nEntries(l)<2) continue;
@@ -984,7 +984,7 @@ combinationResult combiner::combinePriv(){
         std::vector<double> impacts;
         for(size_t i=0;i<ncomb;i++){
             size_t idx=nsyst+i;
-            double diff     = fittercp.getParameter(idx) - out.combined_.at(i);
+            //double diff     = fittercp.getParameter(idx) - out.combined_.at(i);
             double updiffsq   = out.comberrup_.at(i)  *out.comberrup_.at(i)   - fittercp.getParameterErrUp()->at(idx)  *fittercp.getParameterErrUp()->at(idx);
             double downdiffsq = out.comberrdown_.at(i)*out.comberrdown_.at(i) - fittercp.getParameterErrDown()->at(idx)*fittercp.getParameterErrDown()->at(idx);
             double upsign=1,downsign=1;
