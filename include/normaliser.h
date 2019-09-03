@@ -9,6 +9,7 @@
 #define INCLUDE_NORMALISER_H_
 
 #include "combinationResult.h"
+#include "triangularMatrix.h"
 
 class TH1D;
 class TH2D;
@@ -19,6 +20,7 @@ public:
 
     void setInput(const combinationResult& res);
     void setInput(const TH1D* , const TH2D* );
+    void setInput(const std::vector<double>* , const triangularMatrix* );
 
 
     void setIterations(size_t iterations){

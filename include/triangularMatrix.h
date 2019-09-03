@@ -34,6 +34,9 @@ public:
 	bool operator ==(const triangularMatrix&)const;
 	bool operator !=(const triangularMatrix&)const;
 
+	triangularMatrix operator *(double)const;
+    triangularMatrix operator +(const triangularMatrix&)const;
+
 	virtual ~triangularMatrix(){}
 
 	virtual const double& getEntry(const size_t & , const size_t &)const;

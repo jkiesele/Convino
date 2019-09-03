@@ -61,6 +61,29 @@ bool triangularMatrix::operator !=(const triangularMatrix& rhs)const{
 	if(names_!=rhs.names_) return true;
 	return false;
 }
+triangularMatrix triangularMatrix::operator *(double scalar)const{
+    auto out = *this;
+    for(size_t i=0;i<size();i++){
+        for(size_t j=0;j<size();j++){
+            out.setEntry(i,j, scalar * getEntry(i,j));
+        }
+    }
+    return out;
+}
+
+
+triangularMatrix triangularMatrix::operator +(const triangularMatrix& rhs)const{
+    if(size() != rhs.size())
+        throw std::runtime_error("triangularMatrix::operator + sizes don't match");
+    auto out = *this;
+    for(size_t i=0;i<size();i++){
+        for(size_t j=0;j<size();j++){
+            out.setEntry(i,j, getEntry(i,j) + rhs.getEntry(i,j));
+        }
+    }
+    return out;
+}
+
 
 const TString& triangularMatrix::getEntryName(const size_t &idx)const{
 	return names_.getData(idx);

@@ -325,6 +325,10 @@ void combiner::checkConsistency()const{
     //check impacttable_ if all uncertainties exist
     for(const auto& i: impacttable_){
         for(const auto& in: i.second){
+            auto statcheck = in;
+            statcheck.ToLower();
+            if(statcheck == "stat")
+                continue; //no check needed
             bool found=false;
             for(const auto& p: allparas){
                 if(in == p.name())
@@ -974,8 +978,31 @@ combinationResult combiner::combinePriv(){
         simpleFitter fittercp (fitter);
         fittercp.setFastMode(true);
 
-        for(const auto& uncname: i.second)
-            fittercp.setParameterFixed(uncname,true);
+        if(debug)
+            std::cout << "evaluating impact of "<< i.first << "..." << std::endl;
+
+        bool isstat=false;
+        if(i.second.size() < 2){
+            auto statcheck = i.second.at(0);
+            statcheck.ToLower();
+            if(statcheck == "stat")
+                isstat=true;
+        }
+        if(isstat){
+            if(debug)
+                std::cout << "...contains the stat keyword, will run stat evaluation..." << std::endl;
+            //all fixed
+            for(size_t i=0;i<fittercp.getParameters()->size();i++)
+                fittercp.setParameterFixed(i,true);
+            for(size_t i=0;i<ncomb;i++){//open up the combination results, only
+                size_t idx=nsyst+i;
+                fittercp.setParameterFixed(idx,false);
+            }
+        }
+        else{
+            for(const auto& uncname: i.second)
+                fittercp.setParameterFixed(uncname,true);
+        }
 
         fittercp.fit();
         if(!fittercp.wasSuccess()){
@@ -987,6 +1014,15 @@ combinationResult combiner::combinePriv(){
             //double diff     = fittercp.getParameter(idx) - out.combined_.at(i);
             double updiffsq   = out.comberrup_.at(i)  *out.comberrup_.at(i)   - fittercp.getParameterErrUp()->at(idx)  *fittercp.getParameterErrUp()->at(idx);
             double downdiffsq = out.comberrdown_.at(i)*out.comberrdown_.at(i) - fittercp.getParameterErrDown()->at(idx)*fittercp.getParameterErrDown()->at(idx);
+            if(isstat){
+                updiffsq   = fittercp.getParameterErrUp()->at(idx);
+                if(debug)
+                    std::cout << "evaluated stat contribution. Impact is " << updiffsq << std::endl;
+                updiffsq*=updiffsq;
+                downdiffsq = fittercp.getParameterErrDown()->at(idx);
+                downdiffsq*=downdiffsq;
+            }
+
             double upsign=1,downsign=1;
             if(updiffsq<0)
                 upsign=-1;

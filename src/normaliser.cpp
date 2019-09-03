@@ -37,6 +37,18 @@ void normaliser::setInput(const TH1D* h1d, const TH2D* h2d){
     }
     setInput(in_res_);
 }
+void normaliser::setInput(const std::vector<double>* c, const triangularMatrix* tm){
+    in_res_ = combinationResult();
+    in_res_.post_meas_covariance_ = *tm;
+    in_res_.combined_ = *c;
+    in_res_.combnames_.clear();
+    for(int i=0;i<tm->size();i++){
+        TString n="comb_";
+        n+=i;
+        in_res_.combnames_.push_back(n);
+    }
+    setInput(in_res_);
+}
 
 combinationResult normaliser::getNormalised(double addUncertFraction, int bin)const{
     //set up inputs for normalised
