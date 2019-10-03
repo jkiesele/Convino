@@ -922,10 +922,23 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 			double contribution = (x_meas_mu - x_comb_mu) * LM_.at(mu).at(nu) * (x_meas_nu - x_comb_nu);
 			if(pearson){
 				if(mu==nu){
-					contribution*= (double)x_meas_nu/x_comb_nu;
+				    double x_comb_nueps = x_comb_nu + FLT_EPSILON;
+				    if(x_comb_nu<0)
+				        x_comb_nueps = x_comb_nu - FLT_EPSILON;
+
+					contribution*= std::abs((double)x_meas_nu/x_comb_nueps);
 				}
 				else{
-					contribution*= (double)std::sqrt(x_meas_nu/x_comb_nu * x_meas_mu/x_comb_mu);
+				    double x_comb_nueps = x_comb_nu + FLT_EPSILON;
+                    if(x_comb_nu<0)
+                        x_comb_nueps = x_comb_nu - FLT_EPSILON;
+                    double x_comb_mueps = x_comb_mu + FLT_EPSILON;
+                    if(x_comb_mu<0)
+                        x_comb_mueps = x_comb_mu - FLT_EPSILON;
+
+				    double nuscale = std::abs((double)x_meas_nu/x_comb_nueps);
+				    double muscale = std::abs((double)x_meas_mu/x_comb_mueps);
+					contribution*= (double)std::sqrt(nuscale * muscale);
 				}
 			}
 
