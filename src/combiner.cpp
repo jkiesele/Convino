@@ -392,10 +392,6 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
         return std::vector<std::vector<combinationResult> > ();
 
     std::vector<std::vector<combinationResult> > results;
-    for(const auto& ss:syst_scanranges_){
-        results.push_back(std::vector<combinationResult>());
-        ss.size();//to avoid compiler warning
-    }
 
     int ndone=0;
 
@@ -440,12 +436,16 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
 #pragma omp critical (scanpointresult)
 #endif
         {
-            results.at(i)=thisscan;
+            results.push_back(thisscan);
         }
     }
 
 
-
+    for(const auto& sv:results){
+        for(const auto& s:sv){
+            s.printFullInfo(out);
+        }
+    }
     //old
 
     const size_t nobs=tobecombined_.size();
@@ -458,14 +458,16 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
      */
     TFile * tfile=new TFile((TString)outprefix_+"scanPlots.root","RECREATE");
 
-    for(size_t i=0;i<results.size();i++){
-        //const correlationscan * s= & syst_scanranges_.at(i);
-        const TString & name= syst_scanranges_.at(i).name() ;
+    for(size_t i_r=0;i_r<results.size();i_r++){
+        const auto& corr_scan=  syst_scanranges_.at(i_r);
+        const auto& scan_res = results.at(i_r);
+
+        const TString & name= corr_scan.name() ;
         TString filename=textFormatter::makeCompatibleFileName(name.Data());
         if(filename.Length()>100)
             filename=TString(filename,100);
         filename+="_";
-        filename+=i;
+        filename+=i_r;
 
         for(size_t obs=0;obs<nobs;obs++){
             /*
@@ -474,8 +476,8 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
             TString graphname=textFormatter::makeCompatibleFileName(( tobecombined_.at(obs).first+"_"+filename).Data());
             std::vector<double> scan,zero,comb,errup,errdown;
             std::vector<double> minchi2;
-            for(size_t j=0;j<results.at(i).size();j++){
-                const combinationResult& result=results.at(i).at(j);
+            for(size_t j=0;j<scan_res.size();j++){
+                const combinationResult& result=scan_res.at(j);
                 if(result.getCombNames().size()<1) continue; //ignore failed scans
 
                 if(result.getNCombined() != nobs){//sanity check for debugging
@@ -487,8 +489,8 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
                 errdown.push_back(-result.comberrdown_.at(obs));
                 minchi2.push_back(result.getChi2min());
 
-                if(syst_scanranges_.at(i).isSingle())
-                    scan.push_back(syst_scanranges_.at(i).get(0).scanVal(j));
+                if(corr_scan.isSingle())
+                    scan.push_back(corr_scan.get(0).scanVal(j));
                 else
                     scan.push_back(1./(single_correlationscan::nPoints()-1)*(float)j);//no better way...
                 zero.push_back(0);
@@ -502,17 +504,17 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
                     &zero.at(0), &zero.at(0), &zero.at(0), &zero.at(0));
 
             g->GetYaxis()->SetTitle(tobecombined_.at(obs).first);
-            if(syst_scanranges_.at(i).isSingle()){
-                applyGraphCosmetics(g,gc_scancombined,syst_scanranges_.at(i).getLowest(),
-                        syst_scanranges_.at(i).getHighest(),graphname,name);
-                applyGraphCosmetics(gline,gc_scancombined,syst_scanranges_.at(i).getLowest(),
-                        syst_scanranges_.at(i).getHighest(),graphname,name);
+            if(corr_scan.isSingle()){
+                applyGraphCosmetics(g,gc_scancombined,corr_scan.getLowest(),
+                        corr_scan.getHighest(),graphname,name);
+                applyGraphCosmetics(gline,gc_scancombined,corr_scan.getLowest(),
+                        corr_scan.getHighest(),graphname,name);
             }
             else{
-                applyGraphCosmetics(g,gc_multiscan,syst_scanranges_.at(i).getLowest(),
-                        syst_scanranges_.at(i).getHighest(),graphname,name);
-                applyGraphCosmetics(gline,gc_multiscan,syst_scanranges_.at(i).getLowest(),
-                        syst_scanranges_.at(i).getHighest(),graphname,name);
+                applyGraphCosmetics(g,gc_multiscan,corr_scan.getLowest(),
+                        corr_scan.getHighest(),graphname,name);
+                applyGraphCosmetics(gline,gc_multiscan,corr_scan.getLowest(),
+                        corr_scan.getHighest(),graphname,name);
 
             }
 
@@ -522,8 +524,8 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
 
             TGraphAsymmErrors * gminchi2=new TGraphAsymmErrors(comb.size(), &scan.at(0), &minchi2.at(0),
                     &zero.at(0), &zero.at(0), &zero.at(0), &zero.at(0));
-            applyGraphCosmetics(gminchi2,gc_minchi2,syst_scanranges_.at(i).getLowest(),
-                    syst_scanranges_.at(i).getHighest(), "min#chi^2",name);
+            applyGraphCosmetics(gminchi2,gc_minchi2,corr_scan.getLowest(),
+                    corr_scan.getHighest(), "min#chi^2",name);
             gminchi2->SetName("min#chi^{2}");
             gminchi2->SetTitle("min#chi^{2}");
             gminchi2->GetYaxis()->SetTitle("min#chi^{2}");
@@ -541,28 +543,28 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
                 gStyle->SetOptTitle(0);
 
                 double nomcorr=0;
-                if(syst_scanranges_.at(i).isSingle())
-                    nomcorr=nominal.getInputSysCorrelations().getEntry(syst_scanranges_.at(i).get(0).idxa,syst_scanranges_.at(i).get(0).idxb);
+                if(corr_scan.isSingle())
+                    nomcorr=nominal.getInputSysCorrelations().getEntry(corr_scan.get(0).idxa,corr_scan.get(0).idxb);
                 double nomerrd=-nominal.getCombErrdown().at(obs);
                 TGraphAsymmErrors gnom(1, &nomcorr, &nominal.getCombined().at(obs),
                         &zero.at(0), &zero.at(0), &nominal.getCombErrup().at(obs), &nomerrd);
 
-                applyGraphCosmetics(&gnom,gc_nominal,syst_scanranges_.at(i).getLowest(),
-                        syst_scanranges_.at(i).getHighest(),graphname+"_nom",name);
+                applyGraphCosmetics(&gnom,gc_nominal,corr_scan.getLowest(),
+                        corr_scan.getHighest(),graphname+"_nom",name);
                 cv.Draw();
                 g->Draw("Aa3pl");
                 gline->Draw("l");//again
-                if(syst_scanranges_.at(i).isSingle())
+                if(corr_scan.isSingle())
                     gnom.Draw("Pe");
 
 
                 cv.Print((TString)outdir+"/"+nominal.getCombNames().at(obs)+"_"+filename +".pdf");
 
                 cv.Clear();
-                applyGraphCosmetics(g,gc_scancombinedUP,syst_scanranges_.at(i).getLowest(),
-                        syst_scanranges_.at(i).getHighest(),graphname,name,2.05);
-                applyGraphCosmetics(gline,gc_scancombinedUP,syst_scanranges_.at(i).getLowest(),
-                        syst_scanranges_.at(i).getHighest(),graphname,name,2.05);
+                applyGraphCosmetics(g,gc_scancombinedUP,corr_scan.getLowest(),
+                        corr_scan.getHighest(),graphname,name,2.05);
+                applyGraphCosmetics(gline,gc_scancombinedUP,corr_scan.getLowest(),
+                        corr_scan.getHighest(),graphname,name,2.05);
 
                 cv.Divide(1,2);
                 TVirtualPad * pad=cv.cd(1);
@@ -571,15 +573,15 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
                 pad->SetTopMargin(.189);
                 g->Draw("Aa3pl");
                 gline->Draw("l");//again
-                if(syst_scanranges_.at(i).isSingle())
+                if(corr_scan.isSingle())
                     gnom.Draw("Pe");
 
-                if(syst_scanranges_.at(i).isSingle())
-                    applyGraphCosmetics(gminchi2,gc_minchi2,syst_scanranges_.at(i).getLowest(),
-                            syst_scanranges_.at(i).getHighest(), "min#chi^2",name,2.05);
+                if(corr_scan.isSingle())
+                    applyGraphCosmetics(gminchi2,gc_minchi2,corr_scan.getLowest(),
+                            corr_scan.getHighest(), "min#chi^2",name,2.05);
                 else
-                    applyGraphCosmetics(gminchi2,gc_minchi2multiscan,syst_scanranges_.at(i).getLowest(),
-                            syst_scanranges_.at(i).getHighest(), "min#chi^2",name,2.05);
+                    applyGraphCosmetics(gminchi2,gc_minchi2multiscan,corr_scan.getLowest(),
+                            corr_scan.getHighest(), "min#chi^2",name,2.05);
 
                 pad=cv.cd(2);
                 pad->SetBottomMargin(0.293);
@@ -601,11 +603,7 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
     tfile->Close();
     delete tfile;
 
-    for(const auto& sv:results){
-        for(const auto& s:sv){
-            s.printFullInfo(out);
-        }
-    }
+
 
 
     return results;
