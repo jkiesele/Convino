@@ -391,7 +391,7 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
     if(nscans<1)
         return std::vector<std::vector<combinationResult> > ();
 
-    std::vector<std::vector<combinationResult> > results;
+    std::vector<std::vector<combinationResult> > results(syst_scanranges_.size());
 
     int ndone=0;
 
@@ -420,9 +420,16 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
 #pragma omp critical (cout)
 #endif
                 {
-                    std::cout << "performed "<< ndone << " of "<< syst_scanranges_.size()*single_correlationscan::nPoints() << " scans."<<std::endl;
+                    std::cout << "performed "<< ndone << " of "<< syst_scanranges_.size()*single_correlationscan::nPoints() << " scans.: "<< syst_scanranges_.at(i).name()<< ": ";
+                    for(size_t j=0;j<syst_scanranges_.at(i).size();j++){
+                        std::cout << syst_scanranges_.at(i).get(j).scanVal(step) ;
+                        if(j<syst_scanranges_.at(i).size()-1)
+                            std::cout << ", ";
+                    }
+                    std::cout << std::endl;
                 }
             }catch(...){
+                res  = combinationResult();//invalidate for sure
                 std::cout << "one scan point for "<< syst_scanranges_.at(i).name() <<" failed: ";
                 for(size_t j=0;j<syst_scanranges_.at(i).size();j++){
                     std::cout  << syst_scanranges_.at(i).get(j).scanVal(step) << " ";
@@ -430,13 +437,13 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
                 std::cout  <<"ignoring" <<std::endl;
             }
             thisscan.at(step)=res;
-            ndone++;
+            ndone++;//should be atomic - anyway just for printing
         }
 #ifdef USE_MP
 #pragma omp critical (scanpointresult)
 #endif
-        {
-            results.push_back(thisscan);
+        {//maybe this sync is not needed - but doesn't hurt for timing
+            results.at(i)=thisscan;
         }
     }
 
@@ -451,7 +458,6 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
     const size_t nobs=tobecombined_.size();
 
 
-
     /*
      * Second part:
      *   Write output as graphs to TFile
@@ -462,7 +468,10 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
         const auto& corr_scan=  syst_scanranges_.at(i_r);
         const auto& scan_res = results.at(i_r);
 
+
         const TString & name= corr_scan.name() ;
+        std::cout << name << std::endl;//DEBUG
+
         TString filename=textFormatter::makeCompatibleFileName(name.Data());
         if(filename.Length()>100)
             filename=TString(filename,100);
@@ -470,6 +479,8 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
         filename+=i_r;
 
         for(size_t obs=0;obs<nobs;obs++){
+
+            std::cout << "obs " << obs << " of " << nobs << std::endl;
             /*
              * Prepare graph content input
              */
@@ -477,6 +488,8 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
             std::vector<double> scan,zero,comb,errup,errdown;
             std::vector<double> minchi2;
             for(size_t j=0;j<scan_res.size();j++){
+
+
                 const combinationResult& result=scan_res.at(j);
                 if(result.getCombNames().size()<1) continue; //ignore failed scans
 
@@ -494,6 +507,10 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
                 else
                     scan.push_back(1./(single_correlationscan::nPoints()-1)*(float)j);//no better way...
                 zero.push_back(0);
+            }
+            if(!zero.size()){
+                std::cout << "combiner::scanCorrelations: all scans for " << name << ": " << nominal.getCombNames().at(obs)<<" have failed skipping (but please check what's wrong)" <<std::endl;
+                continue;
             }
             /*
              * Create graph and add some cosmetics
@@ -532,68 +549,67 @@ std::vector<std::vector<combinationResult> > combiner::scanCorrelations(std::ost
             if(!obs)
                 gminchi2->Write();
 
+            if(outdir.length()<1) continue;
+
+            system(("mkdir -p "+outdir).data());
+            TCanvas cv;
+            cv.SetLeftMargin(.15);
+            cv.SetBottomMargin(.15);
+
+            gStyle->SetOptTitle(0);
+
+            double nomcorr=0;
+            if(corr_scan.isSingle())
+                nomcorr=nominal.getInputSysCorrelations().getEntry(corr_scan.get(0).idxa,corr_scan.get(0).idxb);
+            double nomerrd=-nominal.getCombErrdown().at(obs);
+            TGraphAsymmErrors gnom(1, &nomcorr, &nominal.getCombined().at(obs),
+                    &zero.at(0), &zero.at(0), &nominal.getCombErrup().at(obs), &nomerrd);
+
+            applyGraphCosmetics(&gnom,gc_nominal,corr_scan.getLowest(),
+                    corr_scan.getHighest(),graphname+"_nom",name);
+            cv.Draw();
+            g->Draw("Aa3pl");
+            gline->Draw("l");//again
+            if(corr_scan.isSingle())
+                gnom.Draw("Pe");
 
 
-            if(outdir.length()){
-                system(("mkdir -p "+outdir).data());
-                TCanvas cv;
-                cv.SetLeftMargin(.15);
-                cv.SetBottomMargin(.15);
+            cv.Print((TString)outdir+"/"+nominal.getCombNames().at(obs)+"_"+filename +".pdf");
 
-                gStyle->SetOptTitle(0);
+            cv.Clear();
+            applyGraphCosmetics(g,gc_scancombinedUP,corr_scan.getLowest(),
+                    corr_scan.getHighest(),graphname,name,2.05);
+            applyGraphCosmetics(gline,gc_scancombinedUP,corr_scan.getLowest(),
+                    corr_scan.getHighest(),graphname,name,2.05);
 
-                double nomcorr=0;
-                if(corr_scan.isSingle())
-                    nomcorr=nominal.getInputSysCorrelations().getEntry(corr_scan.get(0).idxa,corr_scan.get(0).idxb);
-                double nomerrd=-nominal.getCombErrdown().at(obs);
-                TGraphAsymmErrors gnom(1, &nomcorr, &nominal.getCombined().at(obs),
-                        &zero.at(0), &zero.at(0), &nominal.getCombErrup().at(obs), &nomerrd);
+            cv.Divide(1,2);
+            TVirtualPad * pad=cv.cd(1);
+            pad->SetBottomMargin(0.015);
+            pad->SetLeftMargin(.15);
+            pad->SetTopMargin(.189);
+            g->Draw("Aa3pl");
+            gline->Draw("l");//again
+            if(corr_scan.isSingle())
+                gnom.Draw("Pe");
 
-                applyGraphCosmetics(&gnom,gc_nominal,corr_scan.getLowest(),
-                        corr_scan.getHighest(),graphname+"_nom",name);
-                cv.Draw();
-                g->Draw("Aa3pl");
-                gline->Draw("l");//again
-                if(corr_scan.isSingle())
-                    gnom.Draw("Pe");
+            if(corr_scan.isSingle())
+                applyGraphCosmetics(gminchi2,gc_minchi2,corr_scan.getLowest(),
+                        corr_scan.getHighest(), "min#chi^2",name,2.05);
+            else
+                applyGraphCosmetics(gminchi2,gc_minchi2multiscan,corr_scan.getLowest(),
+                        corr_scan.getHighest(), "min#chi^2",name,2.05);
 
-
-                cv.Print((TString)outdir+"/"+nominal.getCombNames().at(obs)+"_"+filename +".pdf");
-
-                cv.Clear();
-                applyGraphCosmetics(g,gc_scancombinedUP,corr_scan.getLowest(),
-                        corr_scan.getHighest(),graphname,name,2.05);
-                applyGraphCosmetics(gline,gc_scancombinedUP,corr_scan.getLowest(),
-                        corr_scan.getHighest(),graphname,name,2.05);
-
-                cv.Divide(1,2);
-                TVirtualPad * pad=cv.cd(1);
-                pad->SetBottomMargin(0.015);
-                pad->SetLeftMargin(.15);
-                pad->SetTopMargin(.189);
-                g->Draw("Aa3pl");
-                gline->Draw("l");//again
-                if(corr_scan.isSingle())
-                    gnom.Draw("Pe");
-
-                if(corr_scan.isSingle())
-                    applyGraphCosmetics(gminchi2,gc_minchi2,corr_scan.getLowest(),
-                            corr_scan.getHighest(), "min#chi^2",name,2.05);
-                else
-                    applyGraphCosmetics(gminchi2,gc_minchi2multiscan,corr_scan.getLowest(),
-                            corr_scan.getHighest(), "min#chi^2",name,2.05);
-
-                pad=cv.cd(2);
-                pad->SetBottomMargin(0.293);
-                pad->SetTopMargin(0.025);
-                pad->SetLeftMargin(.15);
-                gminchi2->Draw("Al");
+            pad=cv.cd(2);
+            pad->SetBottomMargin(0.293);
+            pad->SetTopMargin(0.025);
+            pad->SetLeftMargin(.15);
+            gminchi2->Draw("Al");
 
 
 
-                cv.Print((TString)outdir+"/"+nominal.getCombNames().at(obs)+"_"+filename+"_detailed.pdf");
+            cv.Print((TString)outdir+"/"+nominal.getCombNames().at(obs)+"_"+filename+"_detailed.pdf");
 
-            }
+
 
 
             // g is owned by TFile, no delete necessary
