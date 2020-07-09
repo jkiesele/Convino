@@ -18,9 +18,9 @@
 #include <stdexcept>
 #include "Minuit2/Minuit2Minimizer.h"
 #include "TMinuitMinimizer.h"
-#include "Math/GSLMinimizer.h"
-#include "Math/GSLNLSMinimizer.h"
-#include "Math/GSLSimAnMinimizer.h"
+//#include "Math/GSLMinimizer.h"
+//#include "Math/GSLNLSMinimizer.h"
+//#include "Math/GSLSimAnMinimizer.h"
 #include "TMinuitMinimizer.h"
 #include <limits>
 #include <cfloat>
@@ -602,21 +602,21 @@ ROOT::Math::Minimizer * simpleFitter::invokeMinimizer()const{
 		if(printlevel>0)
 			std::cout << "simpleFitter::invokeMinimizer: got Minuit2Minimizer" <<std::endl;
 	}
-	else if(type_==type_gsl){
-		min=new ROOT::Math::GSLMinimizer();
-		if(printlevel>0)
-			std::cout << "simpleFitter::invokeMinimizer: got GSLMinimizer" <<std::endl;
-	}
-	else if(type_==type_gsl_nonlinear){
-		min=new ROOT::Math::GSLNLSMinimizer();
-		if(printlevel>0)
-			std::cout << "simpleFitter::invokeMinimizer: got GSLNLSMinimizer" <<std::endl;
-	}
-	else if(type_==type_gsl_simanealing){
-		min=new ROOT::Math::GSLSimAnMinimizer();
-		if(printlevel>0)
-			std::cout << "simpleFitter::invokeMinimizer: got GSLNLSMinimizer" <<std::endl;
-	}
+	//else if(type_==type_gsl){
+	//	min=new ROOT::Math::GSLMinimizer();
+	//	if(printlevel>0)
+	//		std::cout << "simpleFitter::invokeMinimizer: got GSLMinimizer" <<std::endl;
+	//}
+	//else if(type_==type_gsl_nonlinear){
+	//	min=new ROOT::Math::GSLNLSMinimizer();
+	//	if(printlevel>0)
+	//		std::cout << "simpleFitter::invokeMinimizer: got GSLNLSMinimizer" <<std::endl;
+	//}
+	//else if(type_==type_gsl_simanealing){
+	//	min=new ROOT::Math::GSLSimAnMinimizer();
+	//	if(printlevel>0)
+	//		std::cout << "simpleFitter::invokeMinimizer: got GSLNLSMinimizer" <<std::endl;
+	//}
 
 
 	if(!min)
