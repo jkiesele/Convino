@@ -19,10 +19,10 @@
 
 
 
-void fitfunctionBase::eval(const double*x, double& f, double* df)const{
+void fitfunctionBase::eval(const double*x, double& f_in, double* df)const{
 	if(!c) throw std::logic_error("fitfunctionBase::eval no combiner associated");
 
-	f=0;
+	long double f=0;
 
 	const std::vector<measurement>& meass=c->measurements_;
 	size_t nmeas=meass.size();
@@ -86,6 +86,8 @@ void fitfunctionBase::eval(const double*x, double& f, double* df)const{
 		}
 		throw std::runtime_error("fitfunctionBase::eval: nan in external correlations");
 	}
+
+	f_in=f;
 
 }
 

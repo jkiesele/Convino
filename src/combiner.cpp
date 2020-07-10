@@ -884,13 +884,22 @@ combinationResult combiner::combinePriv(){
         std::cout << "combiner::combine: first rough fit" <<std::endl;
     //fitter.setStrategy(0);
     //fitter.setTolerance(1.);
-    //fitter.setFastMode(true);
-    //fitter.fit();
-    //fitter.feedErrorsToSteps();
+    fitter.setFastMode(true);
+    fitter.fit();
+    fitter.feedErrorsToSteps();
+
+    if(allcontours_){
+        for(size_t i=0;i<nsys;i++){
+            for(size_t est=0;est<ncomb;est++){
+                size_t idx=nsyst+est;
+                fitter.addContour(i,idx);
+            }
+        }
+    }
 
     fitter.setFastMode(fastmode_);
     fitter.setStrategy(2);
-    fitter.setTolerance(0.1);
+    fitter.setTolerance(0.01);
     if(debug)
         std::cout << "combiner::combine: second precision fit" <<std::endl;
     fitter.fit();
@@ -911,6 +920,13 @@ combinationResult combiner::combinePriv(){
         combnames.push_back(fitter.getParameterNames()->at(idx));
     }
 
+
+    auto contours = fitter.getContourResults();
+    for(const auto& c: contours){
+        auto names = c.first;
+        auto data = c.second;
+        out.contours_.push_back(contourResult(names.first,names.second,data));
+    }
 
     out.orig_sys_correlations_=external_correlations_;
     //	out.meas_correlations_=estimate_correlations_;
@@ -991,6 +1007,7 @@ combinationResult combiner::combinePriv(){
     for(const auto& i:impacttable_){
         simpleFitter fittercp (fitter);
         fittercp.setFastMode(true);
+        fittercp.resetContour();
 
         if(debug)
             std::cout << "evaluating impact of "<< i.first << "..." << std::endl;

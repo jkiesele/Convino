@@ -23,6 +23,8 @@ void coutHelp(){
 	std::cout << "                the final fit to get better starting\n";
 	std::cout << "                parameters\n";
 	std::cout << "                (slower, can help in case of convergence problems)\n"; */
+    std::cout << "\n-c              creates contour plots for all";
+    std::cout << "                 combined values w.r.t. all uncertainties\n";
 	std::cout << "\n-d              switch on debug mode (more printout)\n";
     std::cout << "\n-e              enables scan of different exclude bins for\n";
     std::cout << "                normalised differential inputs\n";
@@ -54,6 +56,7 @@ int main(int argc, char* argv[]){
 	bool doscan=false;
 	bool doexcludebinscan=false;
 	bool rootoutput=false;
+	bool contours=false;
 	int excludebin=-1;
 	//very simple parsing
 	for(int i=1;i<argc;i++){
@@ -105,6 +108,8 @@ int main(int argc, char* argv[]){
 			    doexcludebinscan=true;
             if(targv.Contains("r"))
                 rootoutput=true;
+            if(targv.Contains("c"))
+                contours=true;
 			if(targv.Contains("h")){
 				coutHelp();
 				exit(0);
@@ -131,6 +136,8 @@ int main(int argc, char* argv[]){
 	}
 
 	comb.readConfigFile(infile);
+
+	comb.setAllContours(contours);
 
 	//comb.setup();
 
@@ -193,6 +200,10 @@ int main(int argc, char* argv[]){
 
 	    f.Close();
 
+	}
+	if(contours){
+	    result.writeAllContourPlots(outputprefix+"contours.root");
+	    result.saveAllContourPlots(outputprefix+"contours");
 	}
 
 	return 0;

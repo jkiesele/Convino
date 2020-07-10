@@ -40,7 +40,8 @@ public:
     excludebin_(-1),
     normaliseinfit_(false),normalisewithtoys_(false),
     fastmode_(false),
-    auglagrangemu_(1),auglagrangelambda_(1){}
+    auglagrangemu_(1),auglagrangelambda_(1),
+    allcontours_(true){}
     ~combiner(){clear();}
     enum lh_mod{lh_mod_neyman,lh_mod_pearson};
 
@@ -91,6 +92,8 @@ public:
 
 
     void setFastMode(bool fm);
+
+    void setAllContours(bool set){allcontours_=set;}
     /**
      * Starts the combination procedure and returns a
      * combinationResult object that stores the result of the
@@ -261,6 +264,8 @@ private:
 
 
     double auglagrangemu_,auglagrangelambda_;
+
+    bool allcontours_;
 
 };
 

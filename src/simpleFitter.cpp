@@ -41,6 +41,7 @@ simpleFitter::simpleFitter():chi2min_(1e6),maxcalls_(4e8),
 		minsuccessful_(false),minossuccessful_(false),tolerance_(0.1),functobemin_(0),
 		gradfunctobemin_(0),basefunctobemin_(0),pminimizer_(0),
 		strategy_(2),dummyrun_(false),fastmode_(false),type_(type_minuit){
+    ncontourpoints_=100;
 }
 
 simpleFitter::~simpleFitter(){
@@ -92,6 +93,9 @@ void simpleFitter::setParameters(const std::vector<double>& inpars,const std::ve
 	std::pair<bool, double> limits(false,0);
 	lowerlimits_.resize(paras_.size(),limits);
 	upperlimits_.resize(paras_.size(),limits);
+
+	makecontours_.resize(paras_.size());
+
 }
 
 void simpleFitter::setParameter(size_t idx,double value){
@@ -152,7 +156,7 @@ void simpleFitter::setAsMinosParameter(size_t parnumber,bool set){
 
 void simpleFitter::feedErrorsToSteps(){
 	for(size_t i=0;i<stepsizes_.size();i++)
-		stepsizes_.at(i)=paraerrsup_.at(i)/2;//*0.5; //good enough
+		stepsizes_.at(i)=paraerrsup_.at(i)/10;//*0.5; //good enough
 }
 
 void simpleFitter::fit(){
@@ -254,6 +258,35 @@ void simpleFitter::fit(){
 			if(printlevel>-1)
 				std::cout << paraname+" "  << someblanks << paras_.at(i)<< " +"<< paraerrsup_.at(i) << " " << paraerrsdown_.at(i)<< std::endl;
 		}
+		try{
+		    for(const auto& pb: makecontours_.at(i)){
+
+		        TString paraname_b="";
+		        if(paranames_.size()>pb)
+		            paraname_b=paranames_.at(pb);
+		        else
+		            paraname_b=(TString)"par"+(pb);
+		        if(printlevel>0 || true)
+		            std::cout << "calculating contour for "<< paraname << " vs " <<paraname_b<<std::endl;
+
+		        std::vector<double> x(ncontourpoints_);
+		        std::vector<double> y(ncontourpoints_);
+		        bool csucc = pminimizer_->Contour(i,pb,ncontourpoints_,&x.at(0),&y.at(0));
+
+		        if(!csucc){
+		            std::cout << "calculating contour for "<< paraname << " vs " <<paraname_b<< "failed" << std::endl;
+		        }
+		        else
+		            contours_.push_back({{paraname,paraname_b}, {x,y}});
+
+
+		    }
+		}catch(std::exception& ex){
+		    std::cout <<"exception in contour: "<<  ex.what() << ", makecontours_.size() "
+		            << makecontours_.size() << ", i: "<< i << std::endl;
+		    throw ex;
+		}
+
 		if(printlevel>0)
 		    std::cout << paraname << std::endl;
 	}
@@ -589,6 +622,9 @@ void simpleFitter::copyFrom(const simpleFitter& rhs){
 	fastmode_=rhs.fastmode_;
 
 	type_=rhs.type_;
+
+	makecontours_=rhs.makecontours_;
+	contours_ = rhs.contours_;
 
 }
 

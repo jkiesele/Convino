@@ -7,9 +7,28 @@
 #include "combinationResult.h"
 #include <iostream>
 #include "TH1.h"
+#include "TGraph.h"
 #include "TGraphAsymmErrors.h"
 #include "textFormatter.h"
 #include "helpers.h"
+#include "TFile.h"
+#include "TCanvas.h"
+
+
+TGraph * contourResult::createTGraph()const{
+    const auto& x=contour.first;
+    const auto& y=contour.second;
+
+    TGraph* g = new TGraph(x.size(),&x.at(0),&y.at(0));
+    g->GetXaxis()->SetTitle(names.first);
+    g->GetYaxis()->SetTitle(names.second);
+
+    textFormatter tf;
+    auto name=tf.makeCompatibleFileName((names.first+"_vs_"+names.second).Data());
+    g->SetName(name.data());
+    g->SetTitle(name.data());
+    return g;
+}
 
 
 combinationResult::combinationResult():chi2min_(0),isdifferential_(false),excludebin_(-1){}
@@ -64,7 +83,10 @@ void combinationResult::printFullInfo(std::ostream& out)const{
     }
     for(size_t i=0;i<post_sys_correlations_.size();i++){
         out << textFormatter::fixLength(post_sys_correlations_.getEntryName(i).Data(),maxlength+1)<<" ";
-        out << textFormatter::fixLength(toString(pulls_.at(i)),4) << "   ";
+        if(pulls_.at(i) < 0)
+            out << textFormatter::fixLength(toString(pulls_.at(i)),5) << "   ";
+        else
+            out << " " << textFormatter::fixLength(toString(pulls_.at(i)),4) << "   ";
         out << textFormatter::fixLength(toString(constraints_.at(i)),4) << std::endl;
     }
     if(impacttable_.size()){
@@ -184,6 +206,37 @@ const triangularMatrix& combinationResult::getCombinedCovariance() const {
     return post_meas_covariance_;
 }
 
+void combinationResult::writeAllContourPlots(const TString& rootfilename)const{
+
+    TFile fout(rootfilename,"RECREATE");
+    std::vector<TObject* > gc;
+    for(const auto& c: contours_){
+        auto g = c.createTGraph();
+        gc.push_back(g);
+        g->Write();
+    }
+    fout.Close();
+    for(auto& g:gc)
+        delete g;
+}
+
+void combinationResult::saveAllContourPlots(const TString& dirpath)const{
+
+    system(("mkdir -p "+dirpath).Data());
+
+    TCanvas cv;
+    std::vector<TObject* > gc;
+    for(const auto& c: contours_){
+        auto g = c.createTGraph();
+        gc.push_back(g);
+        g->Draw("APl");
+        cv.Print(dirpath+"/"+g->GetName()+".pdf");
+    }
+    for(auto& g:gc)
+        delete g;
+}
+
+
 void combinationResult::reduce(){
 
     orig_sys_correlations_.clear();
@@ -194,6 +247,7 @@ void combinationResult::reduce(){
     post_all_correlations_.clear();
     pulls_.clear();
     constraints_.clear();
+    contours_.clear();
 
 }
 void combinationResult::copyFrom(const combinationResult& r){

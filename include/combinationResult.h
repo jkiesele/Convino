@@ -17,9 +17,27 @@
 
 class TH1;
 class TGraphAsymmErrors;
+class TGraph;
 
 class combiner;
 class normaliser;
+class combinationResult;
+
+class contourResult{
+public:
+    contourResult(const TString& name_a, const TString& name_b,
+            const std::pair< std::vector<double> , std::vector<double> > & cont){
+        names = {name_a,name_b};
+        contour = cont;
+    }
+
+    TGraph * createTGraph()const;
+
+private:
+    std::pair< std::vector<double> , std::vector<double> > contour;
+    std::pair< TString, TString > names;
+};
+
 
 class combinationResult{
 	friend class combiner;
@@ -189,6 +207,14 @@ public:
         return post_all_correlations_;
     }
 
+    const std::vector<contourResult>& getContours()const{
+        return contours_;
+    }
+
+    void writeAllContourPlots(const TString& rootfilename)const;
+
+    void saveAllContourPlots(const TString& dirpath)const;
+
 	/**
 	 * Reduces the stored information to combined values, combined names
 	 * and the uncertainties, only. Deletes all matrices, pulls and
@@ -209,6 +235,8 @@ protected:
 	double chi2min_;
 	bool isdifferential_;
 	int excludebin_;
+
+	std::vector<contourResult> contours_;
 
 	void copyFrom(const combinationResult& r);
 

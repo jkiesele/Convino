@@ -123,6 +123,21 @@ public:
 
 	void setOnlyRunDummy(bool dummyrun){dummyrun_=dummyrun;}
 
+	void addContour(size_t paraidx_a, size_t paraidx_b){
+	    if(paraidx_a > makecontours_.size() || paraidx_b  > makecontours_.size()){
+	        throw std::out_of_range("simpleFitter::addContour: at least one index out of range (parameters not set yet?)");
+	    }
+	    makecontours_.at(paraidx_a).push_back(paraidx_b);
+	}
+	void resetContour(){
+	    for(auto& v: makecontours_)
+	        v.clear();
+	    contours_.clear();
+	}
+
+	const std::vector<std::pair<std::pair<TString,TString>, std::pair< std::vector<double> , std::vector<double> > > >& getContourResults()const{
+	    return contours_;
+	}
 
 	static bool debug;
 
@@ -173,6 +188,10 @@ private: //set some to protected if inheritance is needed
 
 	int strategy_;
 	bool dummyrun_,fastmode_;
+
+	std::vector<std::vector<size_t> > makecontours_;
+	unsigned int ncontourpoints_;
+	std::vector<std::pair<std::pair<TString,TString>, std::pair< std::vector<double> , std::vector<double> > > > contours_;
 
 	mintypes type_;
 };
