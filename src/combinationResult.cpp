@@ -13,7 +13,7 @@
 #include "helpers.h"
 #include "TFile.h"
 #include "TCanvas.h"
-
+#include <algorithm>
 
 TGraph * contourResult::createTGraph()const{
     const auto& x=contour.first;
@@ -89,10 +89,34 @@ void combinationResult::printFullInfo(std::ostream& out)const{
             out << " " << textFormatter::fixLength(toString(pulls_.at(i)),4) << "   ";
         out << textFormatter::fixLength(toString(constraints_.at(i)),4) << std::endl;
     }
+    printSimpleImpactTable(out);
+    out << "\nmerged impacts " << std::endl;
     if(impacttable_.size()){
         out << std::endl;
         printImpactTable(out);
     }
+}
+
+void combinationResult::printSimpleImpactTable(std::ostream& out)const{
+
+    auto impacts = calculateSimpleImpactTable();
+    out  << "Simple impact table: name, impact [%]" <<std::endl;
+    out << textFormatter::fixLength(" ",15) <<" ";
+    for(size_t c=0;c<combined_.size();c++){
+        out << textFormatter::fixLength(combnames_.at(c).Data(), 15) <<" | ";
+    }
+    out << std::endl;
+    for(const auto& i:impacts){
+        out << textFormatter::fixLength(i.first.Data(),15) << " ";
+        for(size_t c=0;c<combined_.size();c++){
+            double rel = fabs(i.second.at(c) / combined_.at(c))*100.;
+            out << textFormatter::fixLength(toString(rel),15) << " | ";
+        }
+        out << std::endl;
+    }
+    out << std::endl;
+
+
 }
 
 void combinationResult::printImpactTable(std::ostream& out)const{
@@ -266,4 +290,26 @@ void combinationResult::copyFrom(const combinationResult& r){
     chi2min_=r.chi2min_;
     isdifferential_=r.isdifferential_;
     excludebin_=r.excludebin_;
+}
+
+/*
+ * format: systematics (idx), name; rel impact on combined values <vec>
+ */
+std::vector<std::pair< TString, std::vector<double> > > combinationResult::calculateSimpleImpactTable()const {
+
+    std::vector<std::pair< TString, std::vector<double> > >  out;
+
+    for(size_t i=0;i<post_all_correlations_.size()-combined_.size();i++){//combined goes last
+        const auto& name = post_all_correlations_.getEntryName(i);
+        std::vector<double>  impacts;
+        for(size_t j=0;j<combined_.size();j++){
+            double corrcoef = post_all_correlations_.getEntry(i,post_sys_correlations_.size()+j);
+            double comberr = std::max(std::abs(comberrup_.at(j)),std::abs(comberrdown_.at(j)));
+            double err = corrcoef*comberr;
+            impacts.push_back(err);
+        }
+        out.push_back({name, impacts});
+    }
+    return out;
+std::cout << "done" <<std::endl;
 }

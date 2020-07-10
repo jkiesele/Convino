@@ -79,6 +79,8 @@ public:
 
 
 
+    void printSimpleImpactTable(std::ostream& out)const;
+
 	void printImpactTable(std::ostream& out)const;
 
 	/**
@@ -215,6 +217,7 @@ public:
 
     void saveAllContourPlots(const TString& dirpath)const;
 
+
 	/**
 	 * Reduces the stored information to combined values, combined names
 	 * and the uncertainties, only. Deletes all matrices, pulls and
@@ -239,6 +242,10 @@ protected:
 	std::vector<contourResult> contours_;
 
 	void copyFrom(const combinationResult& r);
+
+
+	std::vector<std::pair< TString, std::vector<double> > > calculateSimpleImpactTable()const ;
+
 
 };
 

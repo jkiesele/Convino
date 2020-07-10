@@ -156,7 +156,7 @@ void simpleFitter::setAsMinosParameter(size_t parnumber,bool set){
 
 void simpleFitter::feedErrorsToSteps(){
 	for(size_t i=0;i<stepsizes_.size();i++)
-		stepsizes_.at(i)=paraerrsup_.at(i)/10;//*0.5; //good enough
+		stepsizes_.at(i)=paraerrsup_.at(i)/100;//*0.5; //good enough
 }
 
 void simpleFitter::fit(){
