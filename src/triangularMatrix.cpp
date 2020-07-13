@@ -579,8 +579,7 @@ std::ostream& operator<<(std::ostream& os, const triangularMatrix& m)
 		os << std::left << m.getEntryName(i);
 		for(size_t j=0;j<m.size();j++){
 			double entrd=round(m.getEntry(i,j)*scaler,0.001);
-			std::string entr=toString(entrd);
-			os << textFormatter::fixLength(entr,6);
+			os << textFormatter::fixLength(entrd,6);
 			os <<" ";
 		}
 		os<<'\n';

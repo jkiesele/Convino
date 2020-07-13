@@ -895,11 +895,16 @@ combinationResult combiner::combinePriv(){
                 fitter.addContour(i,idx);
             }
         }
+        //for(size_t est=0;est<ncomb;est++){
+        //    for(size_t b_est=0;b_est<ncomb;b_est++){
+        //        fitter.addContour(est,b_est);
+        //    }
+        //}
     }
 
     fitter.setFastMode(fastmode_);
     fitter.setStrategy(2);
-    fitter.setTolerance(0.01);
+    fitter.setTolerance(0.1);
     if(debug)
         std::cout << "combiner::combine: second precision fit" <<std::endl;
     fitter.fit();

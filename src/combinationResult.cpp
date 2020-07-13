@@ -16,8 +16,13 @@
 #include <algorithm>
 
 TGraph * contourResult::createTGraph()const{
-    const auto& x=contour.first;
-    const auto& y=contour.second;
+    auto x=contour.first;
+    auto y=contour.second;
+    if(x.size()<1)
+        throw std::runtime_error("contourResult::createTGraph: data empty");
+
+    x.push_back(x.at(0));//close circle
+    y.push_back(y.at(0));//close circle
 
     TGraph* g = new TGraph(x.size(),&x.at(0),&y.at(0));
     g->GetXaxis()->SetTitle(names.first);
@@ -84,10 +89,10 @@ void combinationResult::printFullInfo(std::ostream& out)const{
     for(size_t i=0;i<post_sys_correlations_.size();i++){
         out << textFormatter::fixLength(post_sys_correlations_.getEntryName(i).Data(),maxlength+1)<<" ";
         if(pulls_.at(i) < 0)
-            out << textFormatter::fixLength(toString(pulls_.at(i)),5) << "   ";
+            out << textFormatter::fixLength(pulls_.at(i),6) << "   ";
         else
-            out << " " << textFormatter::fixLength(toString(pulls_.at(i)),4) << "   ";
-        out << textFormatter::fixLength(toString(constraints_.at(i)),4) << std::endl;
+            out << " " << textFormatter::fixLength(pulls_.at(i),5) << "   ";
+        out << textFormatter::fixLength(constraints_.at(i),5) << std::endl;
     }
     printSimpleImpactTable(out);
     out << "\nmerged impacts " << std::endl;
@@ -110,7 +115,7 @@ void combinationResult::printSimpleImpactTable(std::ostream& out)const{
         out << textFormatter::fixLength(i.first.Data(),15) << " ";
         for(size_t c=0;c<combined_.size();c++){
             double rel = fabs(i.second.at(c) / combined_.at(c))*100.;
-            out << textFormatter::fixLength(toString(rel),15) << " | ";
+            out << textFormatter::fixLength(rel,15) << " | ";
         }
         out << std::endl;
     }
@@ -127,10 +132,10 @@ void combinationResult::printImpactTable(std::ostream& out)const{
     }
     out << std::endl;
     for(const auto& i:impacttable_){
-        out << textFormatter::fixLength(i.first.Data(),15) << " ";
+        out << textFormatter::fixLength(i.first.Data(),30) << " ";
         for(size_t c=0;c<combined_.size();c++){
             double rel = fabs(i.second.at(c) / combined_.at(c))*100.;
-            out << textFormatter::fixLength(toString(rel),15) << " | ";
+            out << textFormatter::fixLength(rel,10) << " | ";
         }
         out << std::endl;
     }

@@ -11,7 +11,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <algorithm>
-
+#include <iomanip>
 
 
 bool textFormatter::debug=false;
@@ -280,5 +280,16 @@ std::string textFormatter::fixLength(const std::string & in, size_t l, bool trun
 		else
 			return std::string(l-in.length(),' ')+in;
 	}
+}
+
+
+std::string textFormatter::fixLength(float  num_in, size_t l, bool truncate){
+    std::ostringstream s;
+    s.setf(std::ios::fixed);
+    s << std::setprecision(l+10) << num_in;
+    std::string in = s.str();
+
+    return fixLength(in,l,truncate);
+
 }
 
