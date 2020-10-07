@@ -291,7 +291,7 @@ void triangularMatrix::getAbsMinMaxDiagEntry(double& min, double& max, bool noze
 		if(en>max)max=en;
 	}
 }
-void triangularMatrix::readFromFile(const std::string& in, const std::string& marker){
+void triangularMatrix::readFromFile(const std::string& in, const std::string& marker, bool convertToCov){
 	fileReader fr;
 	fr.setComment("#");
 	fr.setDelimiter(" ");
@@ -301,8 +301,11 @@ void triangularMatrix::readFromFile(const std::string& in, const std::string& ma
 	size_t lastlinelength=1;
 	size_t matrixoffset=0;
 	bool check_triangular=true;
+	bool iscorrtocov=false;
 	if(fr.nLines() && (fr.nLines() == fr.nEntries(0)-1 ||  fr.nLines() == fr.nEntries(0)-2))
 	    check_triangular=false;
+
+
 
 	std::vector<TString> names;
 	for(size_t i=0;i<fr.nLines();i++){
@@ -315,6 +318,7 @@ void triangularMatrix::readFromFile(const std::string& in, const std::string& ma
 				//this is a constraint, handle later but allow here
 				lastlinelength++;
 				matrixoffset++;
+				iscorrtocov=true;
 			}
 		}
 		//either triangular format or square
@@ -339,6 +343,34 @@ void triangularMatrix::readFromFile(const std::string& in, const std::string& ma
 			setEntry(i,j-1,fr.getData<double>(im,j+matrixoffset));
 		}
 		im++;
+	}
+
+	if(convertToCov && iscorrtocov){
+
+	    std::vector<double> constr;
+	    for(size_t i=0;i<fr.nLines();i++){
+	        size_t nentries = fr.nEntries(i);
+	        if(nentries>1 && nentries < 3)
+	            continue; //allow for empty lines
+	        TString constraintstr = fr.getData<TString>(i,1);
+
+	        constraintstr.ReplaceAll("(","");
+	        constraintstr.ReplaceAll(")","");
+	        double constraint = constraintstr.Atof();
+
+	        constr.push_back(constraint);
+	    }
+
+	    if(constr.size() != size())
+	        throw std::runtime_error("triangularMatrix::readFromFile: text file format has issues, please check.");
+
+	    auto corr=*this;
+	    for(size_t i=0;i<corr.size();i++){
+	        for(size_t j=i;j<corr.size();j++){
+	            corr.setEntry(i,j, getEntry(i,j) * constr.at(i) * constr.at(j));
+	        }
+	    }
+	    *this=corr;
 	}
 
 }
@@ -590,13 +622,13 @@ void triangularMatrix::printToStream(std::ostream& os, bool texFormatting,
     if(precision>0){
         float preccp=precision;
         number_length=0;
-        while(preccp <= 1){
+        while(preccp <= (float)1){
             number_length++;
             no_exp++;
             preccp*=10;
         }
         if(!number_length)
-            while(preccp > 1){
+            while(preccp > (float)1){
                 number_length++;
                 no_exp++;
                 preccp/=10;

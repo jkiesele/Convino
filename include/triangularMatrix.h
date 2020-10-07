@@ -104,7 +104,7 @@ public:
 	 *
 	 * [end matrix]
 	 */
-	void readFromFile(const std::string& in, const std::string& marker="matrix");
+	void readFromFile(const std::string& in, const std::string& marker="matrix", bool convertToCov=false);
 
 	/**
 	 * appends a block matrix after the last row/column

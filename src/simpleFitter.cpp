@@ -388,7 +388,8 @@ correlationMatrix simpleFitter::getCorrelationMatrix()const{
 
 triangularMatrix simpleFitter::getCovarianceMatrix()const{
     auto hess = getHessianMatrix();
-    hess.invert();
+    if(!fastmode_)
+        hess.invert();
     return hess;
 }
 

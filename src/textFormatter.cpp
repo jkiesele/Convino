@@ -334,7 +334,11 @@ std::string textFormatter::fixLength(float  num_in, size_t l, bool truncate){
     s.setf(std::ios::fixed);
     s << std::setprecision(l+10) << num_in;
     std::string in = s.str();
+    if(num_in<0)
+        l++;
     in = fixLength(in,l,truncate);
+    if(num_in>0)
+        in = " "+in;
     if(in.length() && in[in.length()-1] == '.'){
         in[in.length()-1] = ' ';
         return fixLength(in,l-1,truncate);
@@ -347,12 +351,15 @@ std::string textFormatter::fixLength(double  num_in, size_t l, bool truncate){
     s.setf(std::ios::fixed);
     s << std::setprecision(l+10) << num_in;
     std::string in = s.str();
+    if(num_in<0)
+        l++;
     in = fixLength(in,l,truncate);
+    if(num_in>0)
+        in = " "+in;
     if(in.length() && in[in.length()-1] == '.'){
         in[in.length()-1] = ' ';
-        return fixLength(in,l,truncate);
+        return fixLength(in,l-1,truncate);
     }
     return in;
-
 }
 

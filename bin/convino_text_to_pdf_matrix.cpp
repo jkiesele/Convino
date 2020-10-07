@@ -12,6 +12,7 @@ void coutHelp(){
     std::cout << "\n-i     identifier in the text file such as theMatrix, omitting the brackets\n";
     std::cout << "\n-t     threshold to plot a number in bold (default none)\n";
     std::cout << "\n-p     precision (default 0.01)\n";
+    std::cout << "\n--cov  converts a correlation matrix with constraints into a covariance matrix\n";
     std::cout << std::endl;
     std::cout << "EXAMPLE: convino_text_to_pdf_matrix -i myMatrix result.txt myMatrix.tex" <<std::endl;
 }
@@ -21,16 +22,20 @@ void coutHelp(){
 
 int main(int argc, char* argv[]){
 
-    if(argc<3 || argc >7){
+    if(argc<2+1 || argc >9+1){
         coutHelp();
         return -1;
     }
     std::string id,infile,outfile;
     float mathbfthresh=-1, precision=0.01;
-
+    bool converttocov=false;
     for(int i=1;i<argc;i++){
         TString targv=argv[i];
         if(targv.BeginsWith("-")){
+            if(targv == "--cov"){
+                converttocov=true;
+                continue;
+            }
             if(targv.Contains("h")){
                 coutHelp();
                 return 0;
@@ -63,9 +68,9 @@ int main(int argc, char* argv[]){
     }
 
     triangularMatrix m;
-    m.readFromFile(infile,id);
+    m.readFromFile(infile,id,converttocov);
 
-    std::cout << "writing to " << outfile << std::endl;
+    std::cout << "writing to " << outfile << " precision " << precision <<  std::endl;
     std::ofstream out(outfile);
 
     m.printToStream(out, true,mathbfthresh,precision);
