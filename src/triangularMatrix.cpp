@@ -10,6 +10,7 @@
 #include "fileReader.h"
 #include "helpers.h"
 #include "textFormatter.h"
+#include <unistd.h>
 
 const double triangularMatrix::one_=1.;
 triangularMatrix::triangularMatrix(const size_t &tsszie, double def){
@@ -299,19 +300,25 @@ void triangularMatrix::readFromFile(const std::string& in, const std::string& ma
 	fr.readFile(in);
 	size_t lastlinelength=1;
 	size_t matrixoffset=0;
+	bool check_triangular=true;
+	if(fr.nLines() && (fr.nLines() == fr.nEntries(0)-1 ||  fr.nLines() == fr.nEntries(0)-2))
+	    check_triangular=false;
+
 	std::vector<TString> names;
 	for(size_t i=0;i<fr.nLines();i++){
 		size_t thislinelength=fr.nEntries(i);
+		if(!thislinelength)
+		    continue;
 		if(!i && thislinelength > 2){ //check once: this could be additional correlation info
 			TString entry=fr.getData<TString>(i,1);
 			if(entry.BeginsWith("(") && entry.EndsWith(")")){
 				//this is a constraint, handle later but allow here
-
 				lastlinelength++;
 				matrixoffset++;
 			}
 		}
-		if(thislinelength!=lastlinelength+1){
+		//either triangular format or square
+		if(thislinelength!=lastlinelength+1 && check_triangular){
 			std::string entrystr="";
 			if(fr.nEntries(i)>0)
 				entrystr=fr.getData<std::string>(i,0);
@@ -324,10 +331,14 @@ void triangularMatrix::readFromFile(const std::string& in, const std::string& ma
 		names.push_back(fr.getData<TString>(i,0));
 	}
 	*this=triangularMatrix(names);
+	size_t im=0;
 	for(size_t i=0;i<fr.nLines();i++){
+        if(!fr.nEntries(i))
+            continue;
 		for(size_t j=1;j<fr.nEntries(i)-matrixoffset;j++){
-			setEntry(i,j-1,fr.getData<double>(i,j+matrixoffset));
+			setEntry(i,j-1,fr.getData<double>(im,j+matrixoffset));
 		}
+		im++;
 	}
 
 }
@@ -532,6 +543,104 @@ void triangularMatrix::splitIntoBlocks(size_t splitIdxToRight,
 
 
 }
+
+
+
+
+
+
+void triangularMatrix::printToStream(std::ostream& os, bool texFormatting,
+        float mathbfthresh, float precision)const{
+    double min,max;
+    getMinMaxEntry(min,max,false);
+    double delta = max-min;
+    double scaler=1;
+    while(!texFormatting && delta && delta*scaler < 1)scaler*=10;
+    while(!texFormatting && delta && delta*scaler > 10)scaler*=0.1;
+
+    std::string separator=" ";
+    std::string newline="\n";
+    if(texFormatting){
+        separator=" & ";
+        newline="\\\\ \\hline \n";
+
+        //print tex header
+        os << "\\begin{tabular}{| l | ";
+        for(size_t i=0;i<size();i++)
+            os << " c |";
+        os << "}\n\\hline\n";
+
+    }
+
+    if(scaler <= 0.01 || scaler >= 100){
+        os << "multiplied by: " << scaler <<'\n';}
+    else{
+        scaler=1;}
+
+    std::streamsize save=os.width();
+    if(!texFormatting)
+        os.width(4);
+    size_t maxnamewidth=0;
+    for(size_t i=0;i<size();i++){
+        size_t s=getEntryName(i).Length();
+        if(s>maxnamewidth)maxnamewidth=s;
+    }
+    int number_length=4;
+    int no_exp=0;
+    if(precision>0){
+        float preccp=precision;
+        number_length=0;
+        while(preccp <= 1){
+            number_length++;
+            no_exp++;
+            preccp*=10;
+        }
+        if(!number_length)
+            while(preccp > 1){
+                number_length++;
+                no_exp++;
+                preccp/=10;
+            }
+        number_length++;
+    }
+
+
+    for(size_t i=0;i<size();i++){
+        os.width(maxnamewidth+1);
+        auto ename = getEntryName(i);
+        if(texFormatting)
+            ename = textFormatter::makeTexCompatible(ename.Data());
+        os << std::left << ename;
+        if(texFormatting)
+            os << " & ";
+        for(size_t j=0;j<size();j++){
+            if(texFormatting){
+                float entry=getEntry(i,j);
+                if(precision>0)
+                    entry = round(entry,precision);
+                bool plotbf=false;
+                if(mathbfthresh>0 && fabs(entry)>mathbfthresh)
+                    plotbf=true;
+                os << textFormatter::toScientificTex(entry,number_length,no_exp,true,plotbf);
+            }
+            else{
+                double entrd=round(getEntry(i,j)*scaler,0.000001);
+                os << textFormatter::fixLength(entrd,9);
+            }
+            if(j<size()-1)
+                os << separator;
+        }
+        if(i<size()-1 || texFormatting)
+            os<<newline;
+    }
+    if(texFormatting)
+        os << "\\end{tabular}\n";
+    os.width(save);
+}
+
+
+
+
 void correlationMatrix::setOffDiagonalZero(){
 	entries_ = std::vector<double> (entries_.size(),0);
 }
@@ -556,35 +665,6 @@ const double& correlationMatrix::getEntry(const size_t & r, const size_t & c)con
 
 std::ostream& operator<<(std::ostream& os, const triangularMatrix& m)
 {
-    double min,max;
-    m.getMinMaxEntry(min,max,false);
-    double delta = max-min;
-    double scaler=1;
-    while(delta && delta*scaler < 1)scaler*=10;
-    while(delta && delta*scaler > 10)scaler*=0.1;
-
-    if(scaler <= 0.01 || scaler >= 100){
-        os << "multiplied by: " << scaler <<'\n';}
-    else{
-        scaler=1;}
-    std::streamsize save=os.width();
-	os.width(4);
-	size_t maxnamewidth=0;
-	for(size_t i=0;i<m.size();i++){
-		size_t s=m.getEntryName(i).Length();
-		if(s>maxnamewidth)maxnamewidth=s;
-	}
-	for(size_t i=0;i<m.size();i++){
-		os.width(maxnamewidth+1);
-		os << std::left << m.getEntryName(i);
-		for(size_t j=0;j<m.size();j++){
-			double entrd=round(m.getEntry(i,j)*scaler,0.001);
-			os << textFormatter::fixLength(entrd,6);
-			os <<" ";
-		}
-		os<<'\n';
-	}
-
-	os.width(save);
-	return os;
+    m.printToStream(os,false);
+    return os;
 }

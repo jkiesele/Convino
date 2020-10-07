@@ -385,6 +385,13 @@ correlationMatrix simpleFitter::getCorrelationMatrix()const{
 	}
 	return m;
 }
+
+triangularMatrix simpleFitter::getCovarianceMatrix()const{
+    auto hess = getHessianMatrix();
+    hess.invert();
+    return hess;
+}
+
 triangularMatrix simpleFitter::getHessianMatrix()const{
 	triangularMatrix m;
 	if(paranames_.size())

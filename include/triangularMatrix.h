@@ -128,6 +128,9 @@ public:
 
 	virtual size_t indepDim()const{return entries_.size();}
 
+	void printToStream(std::ostream& os, bool texFormatting=false,
+	        float mathbfthresh=-1, float precision=-1)const;
+
 protected:
 
 	static const double one_;

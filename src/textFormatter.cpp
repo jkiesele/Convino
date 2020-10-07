@@ -12,7 +12,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <iomanip>
-
+#include "helpers.h"
 
 bool textFormatter::debug=false;
 
@@ -283,13 +283,76 @@ std::string textFormatter::fixLength(const std::string & in, size_t l, bool trun
 }
 
 
+std::string textFormatter::toScientificTex(float in, size_t length, size_t ignore_exp, bool addmathmode, bool textbf){
+    if(length <= ignore_exp)
+        throw std::runtime_error("textFormatter::toScientificTex: allowed digits are less than ignored exponent. Would obfuscate numbers, e.g. 1000 -> 100.");
+    double scaler= 10;
+    double ind=in;
+    int exponent=0;
+
+    //FIXME add round here!
+
+    while(ind && std::abs(ind) < (double)1.){
+        ind*=scaler;
+        exponent-=1;
+    }
+    while(ind && std::abs(ind) >= (double)10.){
+        ind/=scaler;
+        exponent+=1;
+    }
+    if(std::abs(exponent) <= ignore_exp){
+        //do nothing
+        auto str = fixLength(in, length);
+        if(textbf)
+            str = "\\mathbf{"+str+"}";
+
+        if (addmathmode)
+            return "$ "+str+" $";
+        else
+            return str;
+    }
+    std::string outstr = fixLength(ind, length)+" \\cdot 10^{"+toString(exponent)+"}";
+    if(textbf)
+        outstr = "\\mathbf{"+outstr+"}";
+    if(addmathmode)
+        return "$ "+outstr+" $";
+    else
+        return outstr;
+}
+
+
+std::string textFormatter::makeTexCompatible(const std::string in){
+    auto out = in;
+    std::replace( out.begin(), out.end(), '_', ' ');
+    std::replace( out.begin(), out.end(), '%', ' ');
+    return out;
+}
+
+
 std::string textFormatter::fixLength(float  num_in, size_t l, bool truncate){
     std::ostringstream s;
     s.setf(std::ios::fixed);
     s << std::setprecision(l+10) << num_in;
     std::string in = s.str();
+    in = fixLength(in,l,truncate);
+    if(in.length() && in[in.length()-1] == '.'){
+        in[in.length()-1] = ' ';
+        return fixLength(in,l-1,truncate);
+    }
+    return in;
+}
 
-    return fixLength(in,l,truncate);
+std::string textFormatter::fixLength(double  num_in, size_t l, bool truncate){
+    std::ostringstream s;
+    s.setf(std::ios::fixed);
+    s << std::setprecision(l+10) << num_in;
+    std::string in = s.str();
+    in = fixLength(in,l,truncate);
+    if(in.length() && in[in.length()-1] == '.'){
+        in[in.length()-1] = ' ';
+        return fixLength(in,l,truncate);
+    }
+    return in;
 
 }
 

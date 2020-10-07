@@ -115,7 +115,11 @@ public:
      * returns a string of fixed length
      */
     static std::string fixLength(float, size_t, bool truncate=true);
+    static std::string fixLength(double, size_t, bool truncate=true);
 
+    static std::string toScientificTex(float in, size_t length=3, size_t ignoreexp=0, bool addmathmode=true, bool textbf=false);
+
+    static std::string makeTexCompatible(const std::string in);
 	/**
 	 * switch for more output
 	 */

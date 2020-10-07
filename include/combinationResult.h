@@ -209,6 +209,17 @@ public:
         return post_all_correlations_;
     }
 
+    /**
+     * Returns a correlationMatrix object containing the
+     * correlations between the combined quantities
+     */
+    const triangularMatrix& getPostFullCovariance() const{
+        return post_full_covariance_;
+    }
+    const triangularMatrix& getPostFullHessian() const{
+        return post_full_hessian_;
+    }
+
     const std::vector<contourResult>& getContours()const{
         return contours_;
     }
@@ -233,6 +244,7 @@ protected:
 	correlationMatrix orig_meas_correlations_;
 	correlationMatrix post_sys_correlations_,post_meas_correlations_,post_all_correlations_;
 	mutable triangularMatrix post_meas_covariance_;
+	triangularMatrix post_full_covariance_,post_full_hessian_;
 	std::vector<double> pulls_;
 	std::vector<double> constraints_;
 	double chi2min_;

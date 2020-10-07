@@ -983,6 +983,8 @@ combinationResult combiner::combinePriv(){
         std::cout << out.post_meas_correlations_ << std::endl;
     }
 
+    out.post_full_covariance_ = fitter.getCovarianceMatrix();
+    out.post_full_hessian_ = fitter.getHessianMatrix();
 
     /*
      * **** check for deviations of parameters that were coupled with maximum correlation < 1

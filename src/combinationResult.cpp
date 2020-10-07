@@ -53,20 +53,25 @@ void combinationResult::printResultOnly(std::ostream& out)const{
 }
 
 void combinationResult::printSimpleInfo(std::ostream& out)const{
-    out << "pre-combine systematics correlations:" <<std::endl;
+    out << "[pre-combine systematics correlations]" <<std::endl;
     out << orig_sys_correlations_ << std::endl;
+    out << "[end pre-combine systematics correlations]\n" <<std::endl;
 
-    out << "post-combine systematics correlations:" <<std::endl;
+    out << "[post-combine systematics correlations]" <<std::endl;
     out << post_sys_correlations_ << std::endl;
+    out << "[end post-combine systematics correlations]\n" <<std::endl;
 
-    out << "pre-combine estimate correlations:" <<std::endl;
+    out << "[pre-combine estimate correlations]" <<std::endl;
     out << orig_meas_correlations_ << std::endl;
+    out << "[end pre-combine estimate correlations]\n" <<std::endl;
 
-    out << "post-combine result correlations:" <<std::endl;
+    out << "[post-combine result correlations]" <<std::endl;
     out << post_meas_correlations_ << std::endl;
+    out << "[end post-combine result correlations]\n" <<std::endl;
 
-    out << "post-combine result covariance:" <<std::endl;
+    out << "[post-combine result covariance]" <<std::endl;
     out << getCombinedCovariance() << std::endl;
+    out << "[end post-combine result covariance]\n" <<std::endl;
 
     printResultOnly(out);
 }
@@ -74,10 +79,14 @@ void combinationResult::printSimpleInfo(std::ostream& out)const{
 void combinationResult::printFullInfo(std::ostream& out)const{
     printSimpleInfo(out);
 
-    out << "full correlation matrix:" <<std::endl;
+    out << "[full correlation matrix]" <<std::endl;
     out << post_all_correlations_ << std::endl;
+    out << "[end full correlation matrix]\n" <<std::endl;
 
-    out << std::endl;
+    out << "[full covariance matrix]" <<std::endl;
+    out << post_full_covariance_ << std::endl;
+    out << "[end full covariance matrix]\n" <<std::endl;
+
     out << textFormatter::fixLength("Name",11);
     out << textFormatter::fixLength("pull",7);
     out << "constraint\n";

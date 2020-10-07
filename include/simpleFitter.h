@@ -98,6 +98,7 @@ public:
 	const double& getHessianCoefficient(size_t i, size_t j)const;
 
 	correlationMatrix getCorrelationMatrix()const;
+    triangularMatrix getCovarianceMatrix()const;
 	triangularMatrix getHessianMatrix()const;
 
 	void getParameterErrorContribution(size_t a, size_t b,double & errup, double& errdown);
