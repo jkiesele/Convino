@@ -706,6 +706,20 @@ void measurement::setup(){
 			}
 		}
 	}
+	//check LM_ for pos def.
+	{
+	    triangularMatrix tm(LM_);
+	    double det=0;
+	    try{
+	        det=0;
+	        tm.invert(det);
+	    }catch(...){
+	        det=0;
+	    }
+	    if(det<0)
+	        throw std::runtime_error("measurement::setup: statistical covariance not positive definite.");
+
+	}
 
 
 
@@ -923,17 +937,17 @@ double measurement::evaluate(const double* pars, double* df, const bool& pearson
 			if(pearson){
 				if(mu==nu){
 				    double x_comb_nueps = x_comb_nu + FLT_EPSILON;
-				    if(x_comb_nu<0)
+				    if(x_comb_nu<=0)
 				        x_comb_nueps = x_comb_nu - FLT_EPSILON;
 
 				    contribution*= std::abs((double)x_meas_nu/x_comb_nueps);
 				}
 				else{
 				    double x_comb_nueps = x_comb_nu + FLT_EPSILON;
-				    if(x_comb_nu<0)
+				    if(x_comb_nu<=0)
 				        x_comb_nueps = x_comb_nu - FLT_EPSILON;
 				    double x_comb_mueps = x_comb_mu + FLT_EPSILON;
-				    if(x_comb_mu<0)
+				    if(x_comb_mu<=0)
 				        x_comb_mueps = x_comb_mu - FLT_EPSILON;
 
 				    double nuscale = std::abs((double)x_meas_nu/x_comb_nueps);
