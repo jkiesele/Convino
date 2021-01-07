@@ -109,7 +109,7 @@ void measurement::readFromFile(const std::string& infile){
 		}
 		double det;
 		corr.invert(det);
-		if(det<0)
+		if(det<=0)
 			throw std::runtime_error("measurement::readFromFile: covariance not positive definite.\ntry to give Hessian directly or increase precision.");
 		H_=corr;
 
