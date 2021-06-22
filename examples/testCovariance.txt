@@ -1,0 +1,14 @@
+
+
+[covariance]
+
+  systA   4
+  systB   0    4
+  systC   0    0    16
+  systD   0    0    0    9
+  systF   0    0    0    0     16
+  meas    3    3    3    3     3     9    
+  sysfG   0    0    0    0     0     2    9
+
+
+[end covariance]
