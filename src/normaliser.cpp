@@ -42,7 +42,7 @@ void normaliser::setInput(const std::vector<double>* c, const triangularMatrix* 
     in_res_.post_meas_covariance_ = *tm;
     in_res_.combined_ = *c;
     in_res_.combnames_.clear();
-    for(int i=0;i<tm->size();i++){
+    for(int i=0;i<(int)tm->size();i++){
         TString n="comb_";
         n+=i;
         in_res_.combnames_.push_back(n);
