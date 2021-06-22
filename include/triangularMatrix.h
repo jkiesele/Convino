@@ -72,6 +72,10 @@ public:
 	 */
 	triangularMatrix createHessianFromCovariance()const;
 
+	triangularMatrix mergeCovarianceEntries(
+	        std::vector<std::pair<TString, std::vector<TString> > > which,
+	        const size_t stat_prec=1000000) const;
+
 	double determinant()const;
 
 

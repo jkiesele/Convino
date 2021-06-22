@@ -7,6 +7,7 @@
 
 
 #include "triangularMatrix.h"
+#include "multiGausGenerator.h"
 #include "fileReader.h"
 #include "helpers.h"
 #include "textFormatter.h"
@@ -162,6 +163,73 @@ triangularMatrix triangularMatrix::createHessianFromCovariance()const{
         }
     }
     return cp;
+}
+
+
+triangularMatrix triangularMatrix::mergeCovarianceEntries(
+        std::vector<std::pair<TString, std::vector<TString> > > which,
+        const size_t stat_prec) const{
+
+    //create a new covariance
+    auto names = createNamesVector();
+    std::vector<TString> newnames;
+    //map the 1:1 associations
+    std::map<size_t,std::vector<size_t> > asso_reduced_to_full;
+    for(size_t i=0;i<names.size();i++){
+        const auto& n = names.at(i);
+        auto it = std::find_if(
+                which.begin(), which.end(),
+                [&n](const std::pair<TString, std::vector<TString> > & x)
+                { for(const auto& ww:x.second)
+                    if(n == ww)
+                        return true;
+                return false;});
+
+        if(it == which.end()){
+            asso_reduced_to_full[newnames.size()]={i};
+            newnames.push_back(n);
+        }
+    }
+
+    for (const auto &w : which){
+        std::vector<size_t>  ids;
+        for(const auto& sw: w.second){
+            ids.push_back(getEntryIndex(sw));
+        }
+        asso_reduced_to_full[newnames.size()]=ids;
+        newnames.push_back(w.first);
+    }
+
+    triangularMatrix out(newnames);
+    multiGausGenerator gen;
+    gen.setCovariance(*this);
+
+    for(size_t toy=0;toy<stat_prec;toy++){
+
+        auto toyvals =gen.generate();
+
+        for(size_t i=0;i<out.size();i++){
+            double xi=0;
+            for(const auto& ii: asso_reduced_to_full[i])
+                xi += toyvals.at(ii);
+
+            for(size_t j=0;j<=i;j++){ //optimise
+                double xj=0;
+                for(const auto& jj: asso_reduced_to_full[j])
+                    xj += toyvals.at(jj);
+
+                double contrib = xi*xj/((double)(stat_prec));
+                //if(i != j)
+                //    contrib*=2;
+                out.setEntry(i,j, out.getEntry(i,j) +  contrib);
+
+            }
+
+        }
+
+
+    }
+    return  out;
 }
 
 double triangularMatrix::determinant()const{
